@@ -1,34 +1,31 @@
 #load "util.fsx"
-open Util
+open Util.Extensions
 
 type Hand = Rock | Paper | Scissors
 type Outcome = Win | Lose | Draw
 
-let scoreHand = function
-    | Rock -> 1
-    | Paper -> 2
-    | Scissors -> 3
+let scoreMatch (mine, theirs) =
+    let handScore =
+        match mine with
+        | Rock -> 1
+        | Paper -> 2
+        | Scissors -> 3
 
-let scoreMatch mine theirs =
     let outcomeScore =
         let outcome =
             match (mine, theirs) with
-            | Rock, Rock -> Draw
-            | Rock, Paper -> Lose
             | Rock, Scissors -> Win
-            | Paper, Rock -> Win
-            | Paper, Paper -> Draw
-            | Paper, Scissors -> Lose
-            | Scissors, Rock -> Lose
             | Scissors, Paper -> Win
-            | Scissors, Scissors -> Draw
-        
+            | Paper, Rock -> Win
+            | a, b when a = b -> Draw
+            | _ -> Lose
+
         match outcome with
         | Win -> 6
         | Draw -> 3
         | Lose -> 0
 
-    scoreHand mine + outcomeScore
+    handScore + outcomeScore
 
 let parseLine line =
     let (|Hand|_|) = function
@@ -37,15 +34,10 @@ let parseLine line =
     | "C" | "Z" -> Some Scissors
     | _ -> None
 
-    match split " " line |> Seq.toList with
-    | [Hand theirs; Hand mine] -> (mine, theirs)
+    line |> String.split " " |> Seq.toList
+    |> function
+    | [Hand theirs; Hand mine] -> mine, theirs
     | _ -> failwithf "Invalid input line: %s" line
-
-inputLines.Value
-|> Seq.map parseLine
-|> Seq.map (fun (mine, theirs) -> scoreMatch mine theirs)
-|> Seq.sum
-|> printfn "%i"
 
 let parseLineCorrectly line =
     let (|Hand|_|) = function
@@ -70,12 +62,12 @@ let parseLineCorrectly line =
         | Scissors, Win -> Rock
         | Scissors, Lose -> Paper
 
-    match split " " line |> Seq.toList with
-    | [Hand theirs; Outcome outcome] -> (calcPlay theirs outcome, theirs)
+    line |> String.split " " |> Seq.toList
+    |> function
+    | [Hand theirs; Outcome outcome] -> calcPlay theirs outcome, theirs
     | _ -> failwithf "Invalid input line: %s" line
 
-inputLines.Value
-|> Seq.map parseLineCorrectly
-|> Seq.map (fun (mine, theirs) -> scoreMatch mine theirs)
-|> Seq.sum
-|> printfn "%i"
+Util.inputLines.Value
+|> Seq.map (fun line -> parseLine line |> scoreMatch, parseLineCorrectly line |> scoreMatch)
+|> Seq.sum2
+|> printfn "%A"

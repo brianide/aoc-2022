@@ -1,10 +1,10 @@
 #load "util.fsx"
-open Util
+open Util.Extensions
 
 let calories =
-    inputText.Value
-    |> split "\n\n"
-    |> Seq.map (split "\n" >> Seq.map int >> Seq.sum)
+    Util.inputText.Value
+    |> String.split "\n\n"
+    |> Seq.map (String.split "\n" >> Seq.map int >> Seq.sum)
 
 let part1 = Seq.max calories
 let part2 = calories |> Seq.sortDescending |> Seq.take 3 |> Seq.sum

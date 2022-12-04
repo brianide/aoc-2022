@@ -1,24 +1,22 @@
 #load "util.fsx"
-open System.Text.RegularExpressions
 open Util.Patterns
+open Util.Extensions
 
-let parseLine line = 
-    let reg = Regex(@"^(\d+)-(\d+),(\d+)-(\d+)$")
+let input =
+    let parseLine line =
+        line
+        |> String.regGroups @"^(\d+)-(\d+),(\d+)-(\d+)$"
+        |> function
+        | [Integer a; Integer b; Integer x; Integer y] -> (a, b), (x, y)
+        | g -> failwithf "Invalid input line: %s ==> %A" line g
 
-    reg.Match(line).Groups
-    |> Seq.map (fun x -> x.Value)
-    |> Seq.toList
-    |> function
-    | [_; Integer a; Integer b; Integer x; Integer y] -> (a, b), (x, y)
-    | g -> failwithf "Invalid input line: %s ==> %A" line g
+    Util.inputLines.Value |> Seq.map parseLine
 
 let checkContained ((a, b), (x, y)) =
     a <= x && b >= y || x <= a && y >= b
 
 let checkOverlap ((a, b), (x, y)) =
     a <= y && x <= b
-
-let input = Seq.map parseLine Util.inputLines.Value
 
 Seq.filter checkContained input
 |> Seq.length
