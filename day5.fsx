@@ -4,27 +4,27 @@ open Util.Extensions
 open Util.Patterns
 
 let scenario = 
-    // Line index where the diagram ends
-    let splitPoint = (Util.inputLines.Value |> Seq.findIndex (fun x -> x.Length = 0)) - 2
-
-    // Parse the stack diagram
-    let diagram =
-        Util.inputLines.Value[.. splitPoint]
-        |> Seq.map (String.regMatches @"(   |\[[A-Z]\])( |$)")
-        |> Seq.map (List.map (function n when n.Trim().Length > 0 -> Some n[1] | _ -> None))
-        |> Seq.toList
+    // Line-height of the diagram
+    let diagramHeight = (Util.inputLines.Value |> Seq.findIndex (fun x -> x.Length = 0)) - 2
 
     // Initialize mutable stacks
-    let stacks = List.init diagram[0].Length (fun _ -> new Stack<char>(diagram.Length))
+    let stacks =
+        let count = (Util.inputLines.Value[0].Length + 1) / 4
+        List.init count (fun _ -> new Stack<char>())
 
-    // Read from the diagram into the mutable stacks
-    diagram
+    // Read the diagram into the stacks
+    let processDiagramLine =
+        Seq.chunkBySize 4
+        >> Seq.map (Seq.item 1)
+        >> Seq.iteri (fun i -> function ' ' -> () | c -> stacks[i].Push(c))
+        
+    Util.inputLines.Value[.. diagramHeight]
     |> Seq.rev
-    |> Seq.iter (List.iteri (fun i -> function Some c -> stacks[i].Push(c) | None -> ()))
+    |> Seq.iter processDiagramLine
 
     // Parse the list of instructions
     let moves =
-        Util.inputLines.Value[splitPoint + 3 ..]
+        Util.inputLines.Value[diagramHeight + 3 ..]
         |> Seq.map (String.regGroups @"move (\d+) from (\d+) to (\d+)" >> function
         | [Integer count; Integer src; Integer dest] -> (count, src - 1, dest - 1)
         | g -> failwithf "Invalid input line: %A" g)
