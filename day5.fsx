@@ -10,8 +10,8 @@ let scenario =
     // Parse the stack diagram
     let diagram =
         Util.inputLines.Value[.. splitPoint]
-        |> Seq.map (String.regMatches @"(?:(   )|\[[A-Z]\])( |$)")
-        |> Seq.map (List.map (function n when n.Trim().Length = 0 -> None | s -> Some s[1]))
+        |> Seq.map (String.regMatches @"(   |\[[A-Z]\])( |$)")
+        |> Seq.map (List.map (function n when n.Trim().Length > 0 -> Some n[1] | _ -> None))
         |> Seq.toList
 
     // Initialize mutable stacks
@@ -20,7 +20,7 @@ let scenario =
     // Read from the diagram into the mutable stacks
     diagram
     |> Seq.rev
-    |> Seq.iter (fun r -> r |> List.iteri (fun i -> function Some c -> stacks[i].Push(c) | None -> ()))
+    |> Seq.iter (List.iteri (fun i -> function Some c -> stacks[i].Push(c) | None -> ()))
 
     // Parse the list of instructions
     let moves =
