@@ -11,6 +11,12 @@ module Extensions =
         let split delim str =
             (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toSeq
 
+        let regMatches patt str =
+            let reg = System.Text.RegularExpressions.Regex(patt)
+            reg.Matches(str)
+            |> Seq.map (fun x -> x.Value)
+            |> Seq.toList
+
         let regGroups patt str =
             let reg = System.Text.RegularExpressions.Regex(patt)
             reg.Match(str).Groups
@@ -29,3 +35,5 @@ let inputText =
 
 let inputLines =
     lazy (Array.get fsi.CommandLineArgs 1 |> System.IO.File.ReadAllLines |> List.ofArray)
+
+let args = Array.toList fsi.CommandLineArgs[2 ..]
