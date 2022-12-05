@@ -4,6 +4,10 @@ module Patterns =
 
 module Extensions =
     module Seq =
+        let everyNth start skip =
+            Seq.mapi (fun i e -> if i >= start && (i - start) % skip = 0 then Some e else None)
+            >> Seq.choose id
+
         let sum2 seq =
             Seq.fold (fun (aSum, bSum) (a, b) -> aSum + a, bSum + b) (0, 0) seq
     

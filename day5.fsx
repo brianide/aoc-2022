@@ -12,15 +12,9 @@ let scenario =
         let count = (Util.inputLines.Value[0].Length + 1) / 4
         List.init count (fun _ -> new Stack<char>())
 
-    // Read the diagram into the stacks
-    let processDiagramLine =
-        Seq.chunkBySize 4
-        >> Seq.map (Seq.item 1)
-        >> Seq.iteri (fun i -> function ' ' -> () | c -> stacks[i].Push(c))
-        
     Util.inputLines.Value[.. diagramHeight]
     |> Seq.rev
-    |> Seq.iter processDiagramLine
+    |> Seq.iter (Seq.everyNth 1 4 >> Seq.iteri (fun i -> function ' ' -> () | c -> stacks[i].Push(c)))
 
     // Parse the list of instructions
     let moves =
