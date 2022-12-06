@@ -1,9 +1,8 @@
 #load "util.fsx"
-open Util.Extensions
 
 let findMarker length =
     Seq.windowed length
-    >> Seq.findIndex (fun w -> w |> Seq.distinct |> Seq.length = length)
+    >> Seq.findIndex (Seq.distinct >> Seq.length >> (=) length)
     >> (+) length
 
 [4; 14]
