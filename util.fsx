@@ -1,6 +1,8 @@
 module Patterns =
     let (|Integer|_|) (x: string) =
         try int x |> Some with :? System.FormatException -> None 
+    let (|Int64|_|) (x: string) =
+        try int64 x |> Some with :? System.FormatException -> None
 
 module Extensions =
     module Seq =
@@ -10,6 +12,13 @@ module Extensions =
 
         let sum2 seq =
             Seq.fold (fun (aSum, bSum) (a, b) -> aSum + a, bSum + b) (0, 0) seq
+
+        let eachTail (input: seq<_>) = seq {
+            let mutable head = Seq.tail input
+            while Seq.length head > 0 do
+                yield head
+                head <- Seq.tail head
+        }
     
     module String =
         let split delim str =
