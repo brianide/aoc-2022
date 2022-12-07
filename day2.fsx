@@ -4,7 +4,7 @@ open Util.Extensions
 type Hand = Rock | Paper | Scissors
 type Outcome = Win | Lose | Draw
 
-let scoreMatch (mine, theirs) =
+let scoreMatch mine theirs =
     let handScore =
         match mine with
         | Rock -> 1
@@ -68,6 +68,6 @@ let parseLineCorrectly line =
     | _ -> failwithf "Invalid input line: %s" line
 
 Util.inputLines.Value
-|> Seq.map (fun line -> parseLine line |> scoreMatch, parseLineCorrectly line |> scoreMatch)
+|> Seq.map (fun line -> parseLine line ||> scoreMatch, parseLineCorrectly line ||> scoreMatch)
 |> Seq.sum2
 |> printfn "%A"
