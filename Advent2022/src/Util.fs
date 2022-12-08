@@ -1,8 +1,16 @@
+module Util
+
 module Patterns =
-    let (|Integer|_|) (x: string) =
-        try int x |> Some with :? System.FormatException -> None 
+    let (|Int32|_|) (x: string) =
+        try int x |> Some with :? System.FormatException -> None
     let (|Int64|_|) (x: string) =
         try int64 x |> Some with :? System.FormatException -> None
+
+    type Part = Silver | Gold
+    let (|Part|_|) = function
+    | "silver" -> Some Silver
+        | "gold" -> Some Gold
+    | _ -> None
 
 module Extensions =
     module Seq =
@@ -39,14 +47,3 @@ module Extensions =
 
         let regSplit reg str =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
-
-let juxtapose fs a =
-    fs |> List.map (fun f -> f a)
-
-let inputText =
-    lazy (Array.get fsi.CommandLineArgs 1 |> System.IO.File.ReadAllText)
-
-let inputLines =
-    lazy (Array.get fsi.CommandLineArgs 1 |> System.IO.File.ReadAllLines |> List.ofArray)
-
-let args = Array.toList fsi.CommandLineArgs[2 ..]
