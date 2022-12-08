@@ -1,5 +1,4 @@
 #load "util.fsx"
-open System.Collections.Generic
 open Util.Extensions
 open Util.Patterns
 
@@ -7,14 +6,13 @@ let scenario =
     // Line-height of the diagram
     let diagramHeight = (Util.inputLines.Value |> Seq.findIndex (fun x -> x.Length = 0)) - 2
 
-    // Initialize mutable stacks
+    // Parse diagram
     let stacks =
-        let count = (Util.inputLines.Value[0].Length + 1) / 4
-        List.init count (fun _ -> new Stack<char>())
-
-    Util.inputLines.Value[.. diagramHeight]
-    |> Seq.rev
-    |> Seq.iter (Seq.everyNth 1 4 >> Seq.iteri (fun i -> function ' ' -> () | c -> stacks[i].Push(c)))
+        Util.inputLines.Value[.. diagramHeight]
+        |> Seq.map (Seq.everyNth 1 4)
+        |> Seq.transpose
+        |> Seq.map (Seq.skipWhile ((=) ' ') >> Seq.toList)
+        |> Seq.toArray
 
     // Parse the list of instructions
     let moves =
@@ -23,25 +21,28 @@ let scenario =
         | [Integer count; Integer src; Integer dest] -> (count, src - 1, dest - 1)
         | g -> failwithf "Invalid input line: %A" g)
 
-    {| Stacks = stacks; Moves = moves |}
+    (stacks, moves)
 
-let movementScheme =
-    match Util.args[0] with
-    | "part1" -> fun (count, src, dest) ->
-        for _ in 1 .. count do
-            scenario.Stacks[src].Pop() |> scenario.Stacks[dest].Push
+let moveSilver (stacks: list<_> array) (count, src, dest) =
+    for _ in 1 .. count do
+        let item = List.head stacks[src]
+        stacks[src] <- List.tail stacks[src]
+        stacks[dest] <- item :: stacks[dest]
+    
+    stacks
 
-    | "part2" -> fun (count, src, dest) ->
-        Seq.init count (fun _ -> scenario.Stacks[src].Pop())
-        |> Seq.rev
-        |> Seq.iter scenario.Stacks[dest].Push
+let moveGold (stacks: list<_> array) (count, src, dest) =
+    let items = stacks[src] |> List.take count
+    stacks[src] <- List.skip count stacks[src]
+    stacks[dest] <- List.append items stacks[dest]
+    stacks
 
-    | m -> failwithf "Invalid mode: %s" m
+let solve (stacks, moves) scheme =
+    moves
+    |> Seq.fold scheme (Array.copy stacks)
+    |> Array.map (List.head >> string)
+    |> String.concat ""
 
-Seq.iter movementScheme scenario.Moves
-
-scenario.Stacks
-|> Seq.map (fun s -> s.Peek())
-|> Seq.toArray
-|> System.String
-|> printfn "%s"
+[moveSilver; moveGold]
+|> List.map (solve scenario)
+|> printfn "%A"
