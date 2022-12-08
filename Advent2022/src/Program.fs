@@ -4,6 +4,7 @@ let getSolver day part =
     let day =
         match day with
         | 1 -> Day1.Solvers
+        | 8 -> Day8.Solvers
         | n -> failwithf "Invalid day: %i" n
     
     match part with
