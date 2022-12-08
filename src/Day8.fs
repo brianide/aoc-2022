@@ -2,7 +2,6 @@ module Day8
 
 open System.IO
 open Util.Extensions
-open Util.Patterns
 
 let parse (file: string) =
     let table =
@@ -77,4 +76,4 @@ let solveGold file =
     |> Seq.max
     |> string
 
-let Solvers = {| Gold = solveGold; Silver = solveSilver |}
+let Solvers = (solveSilver, solveGold)
