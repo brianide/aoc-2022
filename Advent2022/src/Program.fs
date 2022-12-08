@@ -14,6 +14,6 @@ let getSolver day part =
 [<EntryPoint>]
 let main args =
     match args with
-    | [|Int32 day; inputPath; Part part|] -> getSolver day part inputPath |> printfn "%A"
+    | [|Int32 day; inputPath; Part part|] -> getSolver day part inputPath |> printfn "%s"
     | _ -> failwithf "Invalid args: %A" args
     0
