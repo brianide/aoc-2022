@@ -33,7 +33,7 @@ module Extensions =
     
     module String =
         let split delim str =
-            (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toSeq
+            (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toList
 
         let regMatches patt str =
             let reg = Regex(patt)
