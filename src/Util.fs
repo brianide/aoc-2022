@@ -1,16 +1,19 @@
 module Util
 
+open System.Text.RegularExpressions
+
 module Patterns =
     let (|Int32|_|) (x: string) =
         try int x |> Some with :? System.FormatException -> None
     let (|Int64|_|) (x: string) =
         try int64 x |> Some with :? System.FormatException -> None
-
-    type Part = Silver | Gold
-    let (|Part|_|) = function
-    | "silver" -> Some Silver
-        | "gold" -> Some Gold
-    | _ -> None
+    let (|RegGroups|_|) patt str =
+        let reg = Regex(patt)
+        let mat = reg.Match(str)
+        match mat.Success, mat.Groups with
+        | true, groups -> Seq.tail groups |> Seq.map (fun n -> n.Value) |> Seq.toList |> Some
+        | false, _ -> None
+        
 
 module Extensions =
     module Seq =
@@ -33,13 +36,13 @@ module Extensions =
             (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toSeq
 
         let regMatches patt str =
-            let reg = System.Text.RegularExpressions.Regex(patt)
+            let reg = Regex(patt)
             reg.Matches(str)
             |> Seq.map (fun x -> x.Value)
             |> Seq.toList
 
         let regGroups patt str =
-            let reg = System.Text.RegularExpressions.Regex(patt)
+            let reg = Regex(patt)
             reg.Match(str).Groups
             |> Seq.tail
             |> Seq.map (fun x -> x.Value)

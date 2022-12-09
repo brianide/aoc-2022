@@ -11,13 +11,18 @@ let getSolver day part =
         | 6 -> Day6.Solvers
         | 7 -> Day7.Solvers
         | 8 -> Day8.Solvers
-        | n -> failwithf "Invalid day: %i" n
+        | 9 -> Day9.Solvers
+        | _ -> failwith "Invalid day"
     
-    day |> match part with Silver -> fst | Gold -> snd
+    match part with
+    | "silver" -> fst day
+    | "gold" -> snd day
+    | "both" -> fun file -> fst day file + "\n" + snd day file
+    | _ -> failwithf "Invalid part; expected [silver|gold|both]"
 
 [<EntryPoint>]
 let main args =
     match args with
-    | [|Int32 day; inputPath; Part part|] -> getSolver day part inputPath |> printfn "%s"
-    | _ -> failwithf "Invalid args: %A" args
+    | [|Int32 day; inputPath; part|] -> getSolver day part inputPath |> printfn "%s"
+    | _ -> failwithf "Invalid arg string: %A" args
     0
