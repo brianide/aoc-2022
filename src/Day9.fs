@@ -15,7 +15,7 @@ let parse file =
     File.ReadAllLines file
     |> Seq.map (String.split " " >> Seq.toList)
     |> Seq.map (function
-    | [Dir dir; Int32 dist] -> Seq.init dist (fun _ -> dir)
+    | [Dir dir; Int32 dist] -> seq { for _ in 1 .. dist -> dir }
     | x -> failwithf "Invalid input: %A" x)
     |> Seq.collect id
 
@@ -24,29 +24,40 @@ let mag = function
 | n when n < 0 -> -1
 | _ -> 0
 
-let move ((hx, hy), (tx, ty), visited) (x, y) =
-    let (hx, hy) = (hx + x, hy + y)
-    let (tx, ty) =
-        let (dx, dy) = (hx - tx, hy - ty)
+let moveKnot (hx, hy) (kx, ky) =
+        let (dx, dy) = (hx - kx, hy - ky)
         if abs dx > 1 || abs dy > 1 then
-            (tx + mag dx, ty + mag dy)
+            (kx + mag dx, ky + mag dy)
         else
-            (tx, ty)
+            (kx, ky)
 
+let moveRope ((hx, hy), (tx, ty), visited) (x, y) =
+    let (hx, hy) = (hx + x, hy + y)
+    let (tx, ty) = moveKnot (hx, hy) (tx, ty)
     let visited = Set.add (tx, ty) visited
 
     ((hx, hy), (tx, ty), visited)
 
 let solveSilver file =
     parse file
-    |> Seq.fold move ((0, 0), (0, 0), Set.singleton (0, 0))
+    |> Seq.fold moveRope ((0, 0), (0, 0), Set.singleton (0, 0))
     |> fun (_, _, visited) -> Set.count visited
-    |> printfn "%A"
-    ""
+    |> string
+
+let moveLong (rope, visited) (x, y) =
+    let (hx, hy) = List.head rope
+    let (hx, hy) = (hx + x, hy + y)
+
+    let rope = List.tail rope |> List.scan moveKnot (hx, hy)
+    let visited = Set.add (List.last rope) visited
+
+    (rope, visited)
 
 let solveGold file =
     parse file
-    |> ignore
-    ""
+    |> Seq.fold moveLong ([for _ in 1 .. 10 -> (0, 0)], Set.singleton (0, 0))
+    |> snd
+    |> Set.count
+    |> string
 
 let Solvers = (solveSilver, solveGold)
