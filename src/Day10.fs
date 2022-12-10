@@ -1,5 +1,6 @@
 module Day10
 
+open System.Collections
 open System.IO
 open Util.Extensions
 open Util.Patterns
@@ -35,8 +36,28 @@ let solveSilver file =
     |> string
 
 let solveGold file =
+    let mutable pos = 1
+    let mutable cycle = 1
+    let display = BitArray(40 * 6)
+
+    let tick inst =
+        let crt = cycle - 1
+
+        display[crt] <- abs (crt % 40 - pos) <= 1
+
+        match inst with
+        | ADD n -> pos <- pos + n
+        | _ -> ()
+
+        cycle <- cycle + 1
+
     parse file
-    |> ignore
+    |> Seq.iter tick
+
+    for i in 0 .. 5 do
+        for j in 0 .. 39 do
+            printf "%c" <| if display[i * 40 + j] then '#' else ' '
+        printfn ""
     ""
 
 let Solvers = (solveSilver, solveGold)
