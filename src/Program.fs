@@ -13,6 +13,7 @@ let getSolver day part =
         | "8" -> Day8.Solvers
         | "9" -> Day9.Solvers
         | "9m" -> Day9Mutable.Solvers
+        | "10" -> Day10.Solvers
         | _ -> failwith "Invalid day"
     
     match part with

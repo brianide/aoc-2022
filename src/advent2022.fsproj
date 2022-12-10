@@ -15,6 +15,7 @@
     <Compile Include="Day8.fs" />
     <Compile Include="Day9.fs" />
     <Compile Include="Day9Mutable.fs" />
+    <Compile Include="Day10.fs" />
     <!--^ new days go here ^-->
     <Compile Include="Program.fs" />
   </ItemGroup>
