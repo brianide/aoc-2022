@@ -13,7 +13,8 @@ type OpProc =
 type Monkey = {
     mutable Items: int64 list
     Operation: OpProc
-    Routing: int64 * int * int
+    Divisor: int64
+    Routing: int * int
 }
 
 let parse (file: string) =
@@ -33,7 +34,7 @@ let parse (file: string) =
         let targetTrue = lines[4][29 ..] |> int
         let targetFalse = lines[5][30 ..] |> int
 
-        { Items = items; Operation = inst; Routing = (divisor, targetTrue, targetFalse)}
+        { Items = items; Operation = inst; Divisor = divisor; Routing = (targetTrue, targetFalse)}
 
     File.ReadAllLines file
     |> Seq.chunkBySize 7
@@ -42,11 +43,12 @@ let parse (file: string) =
 
 let solve sanity rounds file =
     let monkeys = parse file
-    let counts = Array.zeroCreate<int> monkeys.Length
+    let counts = Array.zeroCreate<int64> monkeys.Length
+    let supermod = monkeys |> Seq.fold (fun acc m -> acc * m.Divisor) 1L
 
     let tickMonkey n =
         let mon = monkeys[n]
-        let (div, routeA, routeB) = mon.Routing
+        let (routeA, routeB) = mon.Routing
 
         let foo x = function Lit n -> n | Prev -> x
         let bar n =
@@ -55,10 +57,10 @@ let solve sanity rounds file =
             | Mul (a, b) -> foo n a * foo n b
 
         let throw item =
-            let newVal = bar item / sanity
-            let dest = if newVal % div = 0 then routeA else routeB
+            let newVal = bar item / sanity % supermod
+            let dest = if newVal % mon.Divisor = 0 then routeA else routeB
             monkeys[dest].Items <- newVal :: monkeys[dest].Items
-            counts[n] <- counts[n] + 1
+            counts[n] <- counts[n] + 1L
 
         Seq.rev mon.Items |> Seq.iter throw
         mon.Items <- []
