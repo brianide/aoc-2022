@@ -4,37 +4,36 @@ open System.IO
 open Util.Extensions
 open Util.Patterns
 
-type OpValue = Prev | Lit of int64
-
-type OpProc =
-| Add of OpValue * OpValue
-| Mul of OpValue * OpValue
-
 type Monkey = {
     mutable Items: int64 list
-    Operation: OpProc
+    Operation: int64 -> int64
     Divisor: int64
     Routing: int * int
 }
 
 let parse (file: string) =
     let parseMonkey (lines: string[]) =
-        let (|OpValue|) = function
-        | "old" -> Prev
-        | Int32 n -> Lit n
-        | _ -> failwith "Invalid operand"
+        let op =
+            let (|Operator|_|) = function
+                | "+" -> Some (+)
+                | "*" -> Some (*)
+                | _ -> None
+            let (|Operand|_|) = function
+                | "old" -> Some <| Operand id
+                | Int64 n -> Some <| Operand (fun _ -> n)
+                | _ -> None
+            let (|Operation|) = function
+                | [Operand a; Operator f; Operand b] -> fun x -> f (a x) (b x)
+                | x -> failwithf "Invalid expression: %A" x
 
-        //let id = String.regGroups @"Monkey (\d+):" lines[0] |> List.head
-        let items = lines[1][18 ..] |> String.split ", " |> Seq.map int64 |> Seq.rev |> Seq.toList
-        let inst = lines[2][19 ..] |> String.split " " |> function
-            | [OpValue a; "+"; OpValue b] -> Add (a, b)
-            | [OpValue a; "*"; OpValue b] -> Mul (a, b)
-            | x -> failwithf "Invalid instruction: %A" x
+            lines[2][19 ..] |> String.split " " |> (|Operation|)
+
+        let items = lines[1][18 ..] |> String.split ", " |> Seq.map int64 |> Seq.toList
         let divisor = lines[3][21 ..] |> int
         let targetTrue = lines[4][29 ..] |> int
         let targetFalse = lines[5][30 ..] |> int
 
-        { Items = items; Operation = inst; Divisor = divisor; Routing = (targetTrue, targetFalse)}
+        { Items = items; Operation = op; Divisor = divisor; Routing = (targetTrue, targetFalse)}
 
     File.ReadAllLines file
     |> Seq.chunkBySize 7
@@ -44,37 +43,25 @@ let parse (file: string) =
 let solve sanity rounds file =
     let monkeys = parse file
     let counts = Array.zeroCreate<int64> monkeys.Length
-    let supermod = monkeys |> Seq.fold (fun acc m -> acc * m.Divisor) 1L
+    let supermod = monkeys |> Seq.map (fun n -> n.Divisor) |> Seq.reduce (*)
 
     let tickMonkey n =
         let mon = monkeys[n]
         let (routeA, routeB) = mon.Routing
 
-        let foo x = function Lit n -> n | Prev -> x
-        let bar n =
-            match mon.Operation with
-            | Add (a, b) -> foo n a + foo n b
-            | Mul (a, b) -> foo n a * foo n b
-
         let throw item =
-            let newVal = bar item / sanity % supermod
+            let newVal = mon.Operation item / sanity % supermod
             let dest = if newVal % mon.Divisor = 0 then routeA else routeB
             monkeys[dest].Items <- newVal :: monkeys[dest].Items
             counts[n] <- counts[n] + 1L
 
-        Seq.rev mon.Items |> Seq.iter throw
+        Seq.iter throw mon.Items
         mon.Items <- []
-
 
     for _ in 1 .. rounds do
         for i in 0 .. monkeys.Length - 1 do
             tickMonkey i
     
     Seq.sortDescending counts |> Seq.take 2 |> Seq.reduce (*) |> string
-
-let solveGold file =
-    parse file
-    |> ignore
-    ""
 
 let Solvers = (solve 3 20, solve 1 10000)

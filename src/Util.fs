@@ -3,6 +3,7 @@ module Util
 open System.Text.RegularExpressions
 
 module Patterns =
+
     let (|Int32|_|) (x: string) =
         try int x |> Some with :? System.FormatException -> None
     let (|Int64|_|) (x: string) =
@@ -16,6 +17,7 @@ module Patterns =
         
 
 module Extensions =
+
     module Seq =
         let everyNth start skip =
             Seq.mapi (fun i e -> if i >= start && (i - start) % skip = 0 then Some e else None)
@@ -55,3 +57,17 @@ module Extensions =
 
         let regSplit reg str =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
+
+
+module Math =
+
+    let inline gcd (a: ^a) (b: ^a) =
+        let (zero: ^a) = LanguagePrimitives.GenericZero
+        let rec compute (a: ^a) (b: ^a) =
+            if b = zero then
+                a
+            else
+                compute b (a % b)
+        compute a b
+
+    let inline lcm (a: ^a) (b: ^a) = a * b / gcd a b
