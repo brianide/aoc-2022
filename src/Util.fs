@@ -48,5 +48,10 @@ module Extensions =
             |> Seq.map (fun x -> x.Value)
             |> Seq.toList
 
+        let regMatchGroups patt str =
+            let reg = Regex(patt)
+            reg.Matches(str)
+            |> Seq.map (fun x -> x.Groups |> Seq.tail |> Seq.map (fun x -> x.Value) |> Seq.toList)
+
         let regSplit reg str =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
