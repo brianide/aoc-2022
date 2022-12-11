@@ -1,20 +1,15 @@
 module Day6
 
 open System.IO
-open Util.Extensions
-open Util.Patterns
 
-let parse (file: string) =
-    []
+let findMarker length =
+    Seq.windowed length
+    >> Seq.findIndex (Seq.distinct >> Seq.length >> (=) length)
+    >> (+) length
 
-let solveSilver file =
-    parse file
-    |> ignore
-    ""
+let solve length file =
+    File.ReadAllText file
+    |> findMarker length
+    |> string
 
-let solveGold file =
-    parse file
-    |> ignore
-    ""
-
-let Solvers = (solveSilver, solveGold)
+let Solvers = (solve 4, solve 14)

@@ -42,8 +42,8 @@ let solveSilver file =
     |> string
 
 let genCoords width height = seq {
-    for y in 0 .. height - 1 do
-        for x in 0 .. width - 1 do
+    for y in 1 .. height - 2 do
+        for x in 1 .. width - 2 do
             yield (x, y)
 }
 
