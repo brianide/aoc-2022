@@ -29,37 +29,33 @@ let parse (file: string) =
 
     { Grid = grid; Start = start; End = dest }
 
-let getNeighbors (grid: int[,]) x y =
+let getNeighbors (grid: int[,]) (x, y) =
     seq {(0, 1); (0, -1); (1, 0); (-1, 0)}
     |> Seq.map (fun (i, j) -> (x + i, y + j))
     |> Seq.filter (Array2D.inside grid)
 
-let pathfind {Grid = grid; Start = start; End = dest} =
-    let mutable unvisited = Set.ofSeq <| seq {
-        yield start
-
-        for y in 0 .. Array2D.length2 grid - 1 do
-            for x in 0 .. Array2D.length1 grid - 1 do
-                if (x, y) <> start then
-                    yield (x, y)
-    }
+let pathfind foo grid start dest =
+    let mutable unvisited = Set.ofSeq <| Array2D.coordSeq grid
+    let mutable seen = Set.singleton start
 
     let mutable dist = unvisited |> Seq.map (fun p -> (p, if p = start then 0 else System.Int32.MaxValue)) |> Map.ofSeq
     let mutable prev = Map.empty
     
-    while not (Set.isEmpty unvisited) do
-        let (x, y) = Seq.minBy (fun p -> dist[p]) unvisited
+    while not (Set.isEmpty seen) do
+        let (x, y) = Seq.minBy (fun p -> dist[p]) seen
 
-        getNeighbors grid x y
-        |> Seq.filter (fun (i, j) -> grid[i, j] - grid[x, y] <= 1)
+        getNeighbors grid (x, y)
+        |> Seq.filter (fun (i, j) -> (grid[i, j] - grid[x, y]) * foo <= 1)
         |> Seq.filter (fun p -> Seq.contains p unvisited)
         |> Seq.iter (fun (i, j) -> 
+            seen <- Set.add (i, j) seen
             let d = dist[(x, y)] + 1
             if d < dist[(i, j)] then
                 dist <- Map.add (i, j) d dist
                 prev <- Map.add (i, j) (x, y) prev)
 
-        unvisited <- unvisited |> Set.remove (x, y)
+        seen <- Set.remove (x, y) seen
+        unvisited <- Set.remove (x, y) unvisited
     
     let path = seq {
         let mutable head = prev[dest]
@@ -69,17 +65,30 @@ let pathfind {Grid = grid; Start = start; End = dest} =
             head <- Map.find head prev
     }
 
-    path
+    (path, dist)
 
 let solveSilver file =
-    parse file
-    |> pathfind
+    let scen = parse file
+    pathfind 1 scen.Grid scen.Start scen.End
+    |> fst
     |> Seq.length
     |> string
 
 let solveGold file =
-    parse file
-    |> ignore
-    ""
+    let scen = parse file
+    let dists = pathfind -1 scen.Grid scen.End (-10, -10) |> snd
+    let closest =
+        Array2D.coordSeq scen.Grid
+        |> Seq.filter (fun (x, y) -> scen.Grid[x, y] = 0)
+        |> Seq.minBy (fun p -> dists[p])
+    
+    let mutable (x, y) = closest
+    let mutable count = 0;
+    while (x, y) <> scen.End do
+        count <- count + 1
+        let (i, j) = getNeighbors scen.Grid (x, y) |> Seq.find (fun p -> dists[(x, y)] - dists[p] = 1)
+        x <- i
+        y <- j
+    string count
 
 let Solvers = (solveSilver, solveGold)

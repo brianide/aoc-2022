@@ -61,6 +61,11 @@ module Extensions =
     module Array2D =
         let inside grid (x, y) =
             x >= 0 && x < Array2D.length1 grid && y >= 0 && y < Array2D.length2 grid
+        let coordSeq grid = seq {
+            for y in 0 .. Array2D.length2 grid - 1 do
+                for x in 0 .. Array2D.length1 grid - 1 do
+                    yield (x, y)
+        }
 
 
 module Math =
