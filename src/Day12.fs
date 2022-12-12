@@ -69,4 +69,4 @@ let solveGold (scen, dist) =
     |> Seq.min
     |> string
 
-let Solver = chainSolver prepare (solveSilver) (solveGold)
+let Solver = chainSolver prepare solveSilver solveGold
