@@ -80,15 +80,9 @@ let solveGold file =
     let closest =
         Array2D.coordSeq scen.Grid
         |> Seq.filter (fun (x, y) -> scen.Grid[x, y] = 0)
-        |> Seq.minBy (fun p -> dists[p])
+        |> Seq.map (fun p -> dists[p])
+        |> Seq.min
     
-    let mutable (x, y) = closest
-    let mutable count = 0;
-    while (x, y) <> scen.End do
-        count <- count + 1
-        let (i, j) = getNeighbors scen.Grid (x, y) |> Seq.find (fun p -> dists[(x, y)] - dists[p] = 1)
-        x <- i
-        y <- j
-    string count
+    string closest
 
 let Solvers = (solveSilver, solveGold)
