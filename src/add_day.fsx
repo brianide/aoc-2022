@@ -14,7 +14,7 @@ let copyTemplate day =
 let addToProj day =
     File.ReadAllLines "advent2022.fsproj"
     |> addLineAbove "^ new days go here ^" (sprintf "    <Compile Include=\"Day%s.fs\" />" day)
-    |> fun n -> File.WriteAllLines ("Program.fs", n)
+    |> fun n -> File.WriteAllLines ("advent2022.fsproj", n)
 
 let addToProg day =
     File.ReadAllLines "Program.fs"
