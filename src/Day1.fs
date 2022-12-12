@@ -3,6 +3,7 @@ module Day1
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let parse (file: string) =
     let rec handleLines total elves = function
@@ -13,7 +14,7 @@ let parse (file: string) =
 
     file |> File.ReadAllLines |> Array.toList |> handleLines 0 []
 
-let solveSilver = parse >> Seq.max >> string
-let solveGold = parse >> Seq.sortDescending >> Seq.take 3 >> Seq.sum >> string
+let solveSilver = Seq.max >> string
+let solveGold = Seq.sortDescending >> Seq.take 3 >> Seq.sum >> string
 
-let Solvers = (solveSilver, solveGold)
+let Solvers = chainSolver parse solveSilver solveGold

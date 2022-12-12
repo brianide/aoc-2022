@@ -2,6 +2,7 @@ module Day3
 
 open System.IO
 open Util.Extensions
+open Util.Plumbing
 
 let getPriority: seq<string> -> int =
     Seq.map Set.ofSeq
@@ -33,4 +34,4 @@ let solveGold =
     >> Seq.sum
     >> string
 
-let Solvers = (solveSilver, solveGold)
+let Solvers = simpleSolver solveSilver solveGold

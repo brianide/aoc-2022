@@ -3,6 +3,7 @@ module Day4
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let checkContained ((a, b), (x, y)) =
     a <= x && b >= y || x <= a && y >= b
@@ -30,4 +31,4 @@ let solveGold =
     >> Seq.length
     >> string
 
-let Solvers = (solveSilver, solveGold)
+let Solvers = simpleSolver solveSilver solveGold

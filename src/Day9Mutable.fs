@@ -4,6 +4,7 @@ open System.IO
 open System.Collections.Generic
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let moveKnot (hx, hy) (kx, ky) =
     let (dx, dy) = (hx - kx, hy - ky)
@@ -39,4 +40,4 @@ let solve length file =
     File.ReadAllLines file |> Array.iter (String.split " " >> handleLine rope visited)
     visited.Count |> string
 
-let Solvers = (solve 2 >> string, solve 10 >> string)
+let Solvers = simpleSolver (solve 2 >> string) (solve 10 >> string)

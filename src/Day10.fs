@@ -4,6 +4,7 @@ open System.Collections
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let Dims = {|Width = 40; Height = 6|}
 
@@ -55,4 +56,4 @@ let solveGold file =
     |> snd
     |> format
 
-let Solvers = (solveSilver, solveGold)
+let Solvers = simpleSolver (solveSilver) (solveGold)

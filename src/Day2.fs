@@ -2,6 +2,7 @@ module Day2
 
 open System.IO
 open Util.Extensions
+open Util.Plumbing
 
 let parse = File.ReadAllLines >> Array.toSeq
 
@@ -23,4 +24,4 @@ let solve fn =
     >> Seq.sum
     >> string
 
-let Solvers = (solve fst, solve snd)
+let Solvers = simpleSolver (solve fst) (solve snd)

@@ -3,6 +3,7 @@ module Day5
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let parse file =
     let lines = File.ReadAllLines file
@@ -43,4 +44,4 @@ let solve scheme file =
     Seq.iter (scheme stacks) moves
     stacks |> Seq.map (List.head >> string) |> String.concat ""
 
-let Solvers = (solve moveSilver, solve moveGold)
+let Solvers = simpleSolver (solve moveSilver) (solve moveGold)

@@ -3,6 +3,7 @@ module Day11
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 type Monkey = {
     mutable Items: int64 list
@@ -64,4 +65,4 @@ let solve sanity rounds file =
     
     Seq.sortDescending counts |> Seq.take 2 |> Seq.reduce (*) |> string
 
-let Solvers = (solve 3 20, solve 1 10000)
+let Solvers = simpleSolver (solve 3 20) (solve 1 10000)

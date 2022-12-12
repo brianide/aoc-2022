@@ -3,6 +3,7 @@ module Day9
 open System.IO
 open Util.Extensions
 open Util.Patterns
+open Util.Plumbing
 
 let parse =
     let (|Dir|_|) = function
@@ -40,4 +41,4 @@ let solve length =
     >> snd
     >> Set.count
 
-let Solvers = (solve 2 >> string, solve 10 >> string)
+let Solvers = simpleSolver (solve 2 >> string) (solve 10 >> string)

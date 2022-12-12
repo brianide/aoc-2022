@@ -3,6 +3,7 @@ module Day12
 open System.IO
 open Util.Extensions
 open Util.Collections
+open Util.Plumbing
 
 type Scenario = {
     Grid: int[,]
@@ -67,4 +68,4 @@ let solveGold file =
     |> Seq.min
     |> string
 
-let Solvers = (solveSilver, solveGold)
+let Solvers = simpleSolver (solveSilver) (solveGold)

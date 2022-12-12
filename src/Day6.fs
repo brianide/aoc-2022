@@ -1,6 +1,7 @@
 module Day6
 
 open System.IO
+open Util.Plumbing
 
 let findMarker length =
     Seq.windowed length
@@ -12,4 +13,4 @@ let solve length file =
     |> findMarker length
     |> string
 
-let Solvers = (solve 4, solve 14)
+let Solvers = simpleSolver (solve 4) (solve 14)

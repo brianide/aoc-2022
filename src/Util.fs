@@ -2,6 +2,21 @@ module Util
 
 open System.Text.RegularExpressions
 
+module Plumbing =
+
+    type ProblemPart = Silver | Gold
+
+    let simpleSolver silver gold file =
+        List.map <| function
+        | Silver -> silver file
+        | Gold -> gold file
+
+    let chainSolver parse silver gold file =
+        let input = parse file
+        List.map <| function
+        | Silver -> silver input
+        | Gold -> gold input
+
 module Patterns =
 
     let (|Int32|_|) (x: string) =
@@ -80,6 +95,7 @@ module Math =
         compute a b
 
     let inline lcm (a: ^a) (b: ^a) = a * b / gcd a b
+
 
 module Collections =
 
