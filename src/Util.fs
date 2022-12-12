@@ -80,3 +80,26 @@ module Math =
         compute a b
 
     let inline lcm (a: ^a) (b: ^a) = a * b / gcd a b
+
+module Collections =
+
+    module Queue =
+
+        type Queue<'a> = Queue of 'a list * 'a list
+
+        let empty = Queue ([], [])
+
+        let singleton e = Queue ([], [e])
+
+        let isEmpty = function Queue ([], []) -> true | _ -> false
+
+        let enqueue e q =
+            match q with Queue (ins, outs) -> Queue(e :: ins, outs)
+        
+        let dequeue =
+            function
+            | Queue ([], []) -> failwith "No elements remaining"
+            | Queue (ins, e :: outs) -> (e, Queue (ins, outs))
+            | Queue (ins, []) ->
+                let outs = List.rev ins
+                (List.head outs, Queue ([], List.tail outs))
