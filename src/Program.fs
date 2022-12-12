@@ -1,25 +1,33 @@
-open Util.Patterns
 open Util.Plumbing
+
+let solvers = [|
+    ("1", Day1.Solver, "Calorie Counting")
+    ("2", Day2.Solver, "Rock Paper Scissors")
+    ("3", Day3.Solver, "Rucksack Reorganization")
+    ("4", Day4.Solver, "Camp Cleanup")
+    ("5", Day5.Solver, "Supply Sacks")
+    ("6", Day6.Solver, "Tuning Trouble")
+    //("7", Day7.Solver, "")
+    ("8", Day8.Solver, "Treetop Tree House")
+    ("9", Day9.Solver, "Rope Bridge")
+    ("9m", Day9Mutable.Solver, "Rope Bridge (Mutable)")
+    ("10", Day10.Solver, "Cathode-Ray Tube")
+    ("10m", Day10Mutable.Solver, "Cathode-Ray Tube (Mutable)")
+    ("11", Day11.Solver, "Monkey in the Middle")
+    ("12", Day12.Solver, "Hill Climbing Algorithm")
+    //^ new days go here ^
+|]
 
 let solveDay day part file =
     let solver =
-        match day with
-        | "1" -> Day1.Solver
-        | "2" -> Day2.Solver
-        | "3" -> Day3.Solver
-        | "4" -> Day4.Solver
-        | "5" -> Day5.Solver
-        | "6" -> Day6.Solver
-        // | "7" -> Day7.Solver
-        | "8" -> Day8.Solver
-        | "9" -> Day9.Solver
-        | "9m" -> Day9Mutable.Solver
-        | "10" -> Day10.Solver
-        | "10m" -> Day10Mutable.Solver
-        | "11" -> Day11.Solver
-        | "12" -> Day12.Solver
-        //^ new days go here ^
-        | _ -> failwith "Invalid day"
+        Seq.tryFind (fun (key, _, _) -> key = day) solvers
+        |> function
+        | Some (_, s, _) -> s
+        | _ ->
+            solvers
+            |> Seq.map (fun (key, _, name) -> sprintf "%3s: %s" key name)
+            |> String.concat "\n"
+            |> failwithf "Invalid day; valid days are:\n%s" 
     
     let solution =
         match part with
