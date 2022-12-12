@@ -4,18 +4,16 @@ open System.IO
 open Util.Extensions
 open Util.Math
 open Util.Patterns
+open Util.Plumbling
 
-let parse (file: string) =
+let parse file =
+    File.ReadAllLines file
     []
 
-let solveSilver file =
-    parse file
-    |> ignore
+let solveSilver input =
     ""
 
-let solveGold file =
-    parse file
-    |> ignore
+let solveGold input =
     ""
 
-let Solvers = (solveSilver, solveGold)
+let Solver = chainSolver parse solveSilver solveGold
