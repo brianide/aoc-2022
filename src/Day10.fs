@@ -17,41 +17,22 @@ let parse file =
 
     File.ReadAllLines file |> Seq.collect parseLine
 
-let runProgram prog =
-    let mutable cycle = 1
-    let mutable x = 1
-    let mutable sigTotal = 0
-    let display = BitArray(Dims.Width * Dims.Height)
-
-    let tick n =
-        if (cycle - 20) % 40 = 0 then
-            sigTotal <- sigTotal + x * cycle
-
-        let crt = cycle - 1
-        display[crt] <- abs (crt % Dims.Width - x) <= 1
-
-        x <- x + n
-        cycle <- cycle + 1
-
-    Seq.iter tick prog
-    (sigTotal, display)
-
+let runProgram =
+    Seq.scan (fun (cycle, x) n -> (cycle + 1, x + n)) (1, 1)
 
 let solveSilver =
-    runProgram
-    >> fst
+    Seq.filter (fun (cycle, _) -> (cycle - 20) % 40 = 0)
+    >> Seq.sumBy (fun (cycle, x) -> cycle * x)
     >> string
 
 let solveGold =
-    let format (arr: BitArray) =
-        [0 .. arr.Count - 1]
-        |> Seq.map (fun n -> if arr[n] then "#" else " ")
-        |> Seq.chunkBySize Dims.Width
-        |> Seq.map (String.concat "")
-        |> String.concat "\n"
+    let format i (_, x) =
+        if abs (i % Dims.Width - x) <= 1 then "#" else " "
+        
+    Seq.mapi format
+    >> Seq.take (Dims.Width * Dims.Height)
+    >> Seq.chunkBySize Dims.Width
+    >> Seq.map (String.concat "")
+    >> String.concat "\n"
 
-    runProgram
-    >> snd
-    >> format
-
-let Solver = chainSolver parse (solveSilver) (solveGold)
+let Solver = chainSolver (parse >> runProgram) (solveSilver) (solveGold)

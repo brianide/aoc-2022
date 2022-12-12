@@ -15,6 +15,7 @@ let solveDay day part file =
         | "9" -> Day9.Solver
         | "9m" -> Day9Mutable.Solver
         | "10" -> Day10.Solver
+        | "10m" -> Day10Mutable.Solver
         | "11" -> Day11.Solver
         | "12" -> Day12.Solver
         //^ new days go here ^
