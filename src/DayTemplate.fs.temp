@@ -2,6 +2,7 @@ module Day
 
 open System.IO
 open Util.Extensions
+open Util.Math
 open Util.Patterns
 
 let parse (file: string) =
