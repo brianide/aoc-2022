@@ -4,8 +4,6 @@ open System.IO
 open Util.Extensions
 open Util.Plumbing
 
-let parse = File.ReadAllLines >> Array.toSeq
-
 let scoreGame = function
 | "A X" -> 1 + 3, 3 + 0
 | "A Y" -> 2 + 6, 1 + 3
@@ -19,9 +17,8 @@ let scoreGame = function
 | x -> failwithf "Bad input: %s" x
 
 let solve fn =
-    parse
-    >> Seq.map (scoreGame >> fn)
+    Seq.map (scoreGame >> fn)
     >> Seq.sum
     >> string
 
-let Solvers = simpleSolver (solve fst) (solve snd)
+let Solver = chainSolver File.ReadAllLines (solve fst) (solve snd)

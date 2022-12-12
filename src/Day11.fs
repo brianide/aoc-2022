@@ -12,7 +12,7 @@ type Monkey = {
     Routing: int * int
 }
 
-let parse (file: string) =
+let parse file =
     let parseMonkey (lines: string[]) =
         let op =
             let (|Operator|_|) = function
@@ -41,8 +41,7 @@ let parse (file: string) =
     |> Seq.map parseMonkey
     |> Seq.toArray
 
-let solve sanity rounds file =
-    let monkeys = parse file
+let solve sanity rounds (monkeys: Monkey[]) =
     let counts = Array.zeroCreate<int64> monkeys.Length
     let supermod = monkeys |> Seq.map (fun n -> n.Divisor) |> Seq.reduce (*)
 
@@ -65,4 +64,4 @@ let solve sanity rounds file =
     
     Seq.sortDescending counts |> Seq.take 2 |> Seq.reduce (*) |> string
 
-let Solvers = simpleSolver (solve 3 20) (solve 1 10000)
+let Solver = chainSolver parse (solve 3 20) (solve 1 10000)

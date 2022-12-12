@@ -36,9 +36,9 @@ let moveRope (rope, visited) (x, y) =
     (rope, visited)
 
 let solve length =
-    parse
-    >> Seq.fold moveRope ([for _ in 1 .. length -> (0, 0)], Set.singleton (0, 0))
+    Seq.fold moveRope ([for _ in 1 .. length -> (0, 0)], Set.singleton (0, 0))
     >> snd
     >> Set.count
+    >> string
 
-let Solvers = simpleSolver (solve 2 >> string) (solve 10 >> string)
+let Solver = chainSolver parse (solve 2) (solve 10)

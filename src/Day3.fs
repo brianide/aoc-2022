@@ -13,8 +13,6 @@ let getPriority: seq<string> -> int =
     | c when c >= 'A' && c <= 'Z' -> int c - int 'A' + 27
     | c -> failwithf "Invalid character: %c" c
 
-let parse = File.ReadAllLines >> Array.toSeq 
-
 let splitSack (line: string) =
     let mid = line.Length / 2
     let sack1 = line.[..mid-1]
@@ -22,16 +20,14 @@ let splitSack (line: string) =
     [sack1; sack2]
 
 let solveSilver =
-    parse
-    >> Seq.map (splitSack >> getPriority)
+    Seq.map (splitSack >> getPriority)
     >> Seq.sum
     >> string
 
 let solveGold =
-    parse
-    >> Seq.chunkBySize 3
+    Seq.chunkBySize 3
     >> Seq.map getPriority
     >> Seq.sum
     >> string
 
-let Solvers = simpleSolver solveSilver solveGold
+let Solver = chainSolver File.ReadAllLines solveSilver solveGold

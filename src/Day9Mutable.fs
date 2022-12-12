@@ -40,4 +40,4 @@ let solve length file =
     File.ReadAllLines file |> Array.iter (String.split " " >> handleLine rope visited)
     visited.Count |> string
 
-let Solvers = simpleSolver (solve 2 >> string) (solve 10 >> string)
+let Solver = simpleSolver (solve 2) (solve 10)

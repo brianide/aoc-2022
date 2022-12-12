@@ -20,15 +20,13 @@ let parse =
     | g -> failwithf "Invalid input line: %A" g)
 
 let solveSilver =
-    parse
-    >> Seq.filter checkContained
+    Seq.filter checkContained
     >> Seq.length
     >> string
 
 let solveGold =
-    parse
-    >> Seq.filter checkOverlap
+    Seq.filter checkOverlap
     >> Seq.length
     >> string
 
-let Solvers = simpleSolver solveSilver solveGold
+let Solver = chainSolver parse solveSilver solveGold

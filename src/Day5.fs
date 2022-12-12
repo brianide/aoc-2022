@@ -39,9 +39,9 @@ let moveGold (stacks: list<_> array) (count, src, dest) =
     stacks[src] <- List.skip count stacks[src]
     stacks[dest] <- List.append items stacks[dest]
 
-let solve scheme file =
-    let (stacks, moves) = parse file
+let solve scheme (stacks, moves) =
+    let stacks = Array.copy stacks
     Seq.iter (scheme stacks) moves
     stacks |> Seq.map (List.head >> string) |> String.concat ""
 
-let Solvers = simpleSolver (solve moveSilver) (solve moveGold)
+let Solver = chainSolver parse (solve moveSilver) (solve moveGold)

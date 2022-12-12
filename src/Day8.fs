@@ -4,7 +4,7 @@ open System.IO
 open Util.Extensions
 open Util.Plumbing
 
-let parse (file: string) =
+let parse file =
     let table =
         file
         |> File.ReadAllLines
@@ -26,9 +26,7 @@ let genLines width height = seq {
         yield List.rev k
 }
 
-let solveSilver file =
-    let (table, width, height) = parse file
-
+let solveSilver (table: int[][], width, height) =
     let folder (maximum, visible) (x, y) = 
         let curr = table[y][x]
         let newMax = max maximum curr
@@ -55,9 +53,7 @@ let genScenicLines width height x y = seq {
     yield [y - 1 .. -1 .. 0] |> List.map (fun dy -> (x, dy))
 }
 
-let solveGold file =
-    let (table, width, height) = parse file
-
+let solveGold (table: int[][], width, height) =
     let scoreLine cent line =
         line
         |> Seq.map (fun (x, y) -> table[y][x])
@@ -77,4 +73,4 @@ let solveGold file =
     |> Seq.max
     |> string
 
-let Solvers = simpleSolver solveSilver solveGold
+let Solver = chainSolver parse solveSilver solveGold

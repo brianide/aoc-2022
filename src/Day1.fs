@@ -17,4 +17,4 @@ let parse (file: string) =
 let solveSilver = Seq.max >> string
 let solveGold = Seq.sortDescending >> Seq.take 3 >> Seq.sum >> string
 
-let Solvers = chainSolver parse solveSilver solveGold
+let Solver = chainSolver parse solveSilver solveGold

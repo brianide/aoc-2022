@@ -8,9 +8,6 @@ let findMarker length =
     >> Seq.findIndex (Seq.distinct >> Seq.length >> (=) length)
     >> (+) length
 
-let solve length file =
-    File.ReadAllText file
-    |> findMarker length
-    |> string
+let solve length = findMarker length >> string
 
-let Solvers = simpleSolver (solve 4) (solve 14)
+let Solver = chainSolver File.ReadAllText (solve 4) (solve 14)

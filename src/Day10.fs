@@ -37,13 +37,12 @@ let runProgram prog =
     (sigTotal, display)
 
 
-let solveSilver file =
-    parse file
-    |> runProgram
-    |> fst
-    |> string
+let solveSilver =
+    runProgram
+    >> fst
+    >> string
 
-let solveGold file =
+let solveGold =
     let format (arr: BitArray) =
         [0 .. arr.Count - 1]
         |> Seq.map (fun n -> if arr[n] then "#" else " ")
@@ -51,9 +50,8 @@ let solveGold file =
         |> Seq.map (String.concat "")
         |> String.concat "\n"
 
-    parse file
-    |> runProgram
-    |> snd
-    |> format
+    runProgram
+    >> snd
+    >> format
 
-let Solvers = simpleSolver (solveSilver) (solveGold)
+let Solver = chainSolver parse (solveSilver) (solveGold)
