@@ -58,6 +58,10 @@ module Extensions =
         let regSplit reg str =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
 
+    module Array2D =
+        let inside grid (x, y) =
+            x >= 0 && x < Array2D.length1 grid && y >= 0 && y < Array2D.length2 grid
+
 
 module Math =
 

@@ -1,4 +1,4 @@
-﻿open Util.Patterns
+open Util.Patterns
 
 let getSolver day part =
     let day =
@@ -15,6 +15,7 @@ let getSolver day part =
         | "9m" -> Day9Mutable.Solvers
         | "10" -> Day10.Solvers
         | "11" -> Day11.Solvers
+        | "12" -> Day12.Solvers
         //^ new days go here ^
         | _ -> failwith "Invalid day"
     
