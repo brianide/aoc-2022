@@ -1,9 +1,7 @@
 module Day13
 
-open System
 open System.IO
 open Util.Extensions
-open Util.Math
 open Util.Patterns
 open Util.Plumbing
 
@@ -23,11 +21,6 @@ let parse file =
     File.ReadAllLines file
     |> Seq.chunkBySize 3
     |> Seq.collect (Seq.take 2 >> Seq.map (String.regMatches @"\[|]|\d+" >> parseExp [] []))
-
-let rec printable tree =
-    match tree with
-    | Digit n -> string n
-    | List k -> List.map printable k |> String.concat "," |> sprintf "[%s]"
 
 let rec compare a b =
     match (a, b) with
@@ -50,17 +43,17 @@ let solveSilver =
 
     Seq.chunkBySize 2
     >> Seq.map tuplize
-    >> Seq.mapi (fun i (a, b) -> (i + 1, a, b))
-    >> Seq.filter (fun (_, a, b) -> compare a b <= 0)
-    >> Seq.sumBy (fun (i, _, _) -> i)
+    >> Seq.mapi (fun i (a, b) -> (i + 1, compare a b <= 0))
+    >> Seq.filter snd
+    >> Seq.sumBy fst
     >> string
 
 let solveGold (input: seq<Atom>) =
-    let divA = List[List[Digit 2]]
-    let divB = List[List[Digit 6]]
+    let divs = [List[List[Digit 2]]; List[List[Digit 6]]]
+    let ordered = Seq.append divs input |> Seq.sortWith compare
 
-    let ordered = Seq.append [divA; divB] input |> Seq.sortWith compare
-
-    (Seq.findIndex ((=) divA) ordered + 1) * (Seq.findIndex ((=) divB) ordered + 1) |> string
+    divs
+    |> Seq.map (fun k -> Seq.findIndex ((=) k) ordered + 1)
+    |> Seq.reduce (*) |> string
 
 let Solver = chainSolver parse solveSilver solveGold
