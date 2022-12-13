@@ -15,7 +15,6 @@ let solvers = [|
     ("10m", Day10Mutable.Solver, "Cathode-Ray Tube (Mutable)")
     ("11", Day11.Solver, "Monkey in the Middle")
     ("12", Day12.Solver, "Hill Climbing Algorithm")
-    ("12v", Day12Visual.Solver, "Hill Climbing Algorithm (Visual)")
     ("13", Day13.Solver, "Distress Signal")
     //^ new days go here ^
 |]

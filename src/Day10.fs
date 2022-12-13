@@ -34,4 +34,4 @@ let solveGold =
     >> Seq.map (String.concat "")
     >> String.concat "\n"
 
-let Solver = chainSolver (parse >> runProgram) (solveSilver) (solveGold)
+let Solver = chainSolver (parse >> runProgram) solveSilver solveGold
