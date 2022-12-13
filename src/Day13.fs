@@ -12,22 +12,17 @@ type Atom =
 | List of Atom list
 
 let parse file =
-    let rec parseExp (atoms: Atom list) stack =
+    let rec parseExp atoms stack =
         function
         | "[" :: rest -> parseExp [] (atoms :: stack) rest
         | "]" :: rest -> parseExp (List (List.rev atoms) :: List.head stack) (List.tail stack) rest
         | Int32 n :: rest -> parseExp ((Digit n) :: atoms) stack rest 
         | [] -> List.exactlyOne atoms
-        | _ -> failwith "Invalid input"
-
-    let tuplize =
-        function
-        | [a; b] -> (a, b)
-        | x -> failwithf "Malformed input: %A" x
+        | _ -> failwith "Invalid input state"
 
     File.ReadAllLines file
     |> Seq.chunkBySize 3
-    |> Seq.map (Seq.take 2 >> Seq.map (String.regMatches @"\[|]|\d+" >> parseExp [] []) >> Seq.toList >> tuplize)
+    |> Seq.collect (Seq.take 2 >> Seq.map (String.regMatches @"\[|]|\d+" >> parseExp [] []))
 
 let rec printable tree =
     match tree with
@@ -47,12 +42,25 @@ let rec compare a b =
     | List a, Digit b -> compare (List a) (List [Digit b]) 
 
 let solveSilver =
-    Seq.mapi (fun i (a, b) -> (i + 1, a, b))
+    let tuplize =
+        Seq.toList
+        >> function
+        | [a; b] -> (a, b)
+        | _ -> failwith "Invalid input"
+
+    Seq.chunkBySize 2
+    >> Seq.map tuplize
+    >> Seq.mapi (fun i (a, b) -> (i + 1, a, b))
     >> Seq.filter (fun (_, a, b) -> compare a b <= 0)
     >> Seq.sumBy (fun (i, _, _) -> i)
     >> string
 
-let solveGold input =
-    ""
+let solveGold (input: seq<Atom>) =
+    let divA = List[List[Digit 2]]
+    let divB = List[List[Digit 6]]
+
+    let ordered = Seq.append [divA; divB] input |> Seq.sortWith compare
+
+    (Seq.findIndex ((=) divA) ordered + 1) * (Seq.findIndex ((=) divB) ordered + 1) |> string
 
 let Solver = chainSolver parse solveSilver solveGold
