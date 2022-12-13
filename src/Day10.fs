@@ -1,6 +1,5 @@
 module Day10
 
-open System.Collections
 open System.IO
 open Util.Extensions
 open Util.Patterns

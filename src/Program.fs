@@ -7,7 +7,7 @@ let solvers = [|
     ("4", Day4.Solver, "Camp Cleanup")
     ("5", Day5.Solver, "Supply Sacks")
     ("6", Day6.Solver, "Tuning Trouble")
-    //("7", Day7.Solver, "")
+    ("7", Day7.Solver, "No Space Left On Device")
     ("8", Day8.Solver, "Treetop Tree House")
     ("9", Day9.Solver, "Rope Bridge")
     ("9m", Day9Mutable.Solver, "Rope Bridge (Mutable)")

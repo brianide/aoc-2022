@@ -33,6 +33,12 @@ module Patterns =
 
 module Extensions =
 
+    module Map =
+        let findOrDefault k v map =
+            match Map.tryFind k map with
+            | Some n -> n
+            | None -> v
+
     module Seq =
         let everyNth start skip =
             Seq.mapi (fun i e -> if i >= start && (i - start) % skip = 0 then Some e else None)
@@ -41,14 +47,11 @@ module Extensions =
         let sum2 seq =
             Seq.fold (fun (aSum, bSum) (a, b) -> aSum + a, bSum + b) (0, 0) seq
 
-        let eachTail (input: seq<_>) = seq {
-            let mutable head = Seq.tail input
-            while Seq.length head > 0 do
-                yield head
-                head <- Seq.tail head
-        }
+        let tails col =
+            Seq.scan (fun a _ -> Seq.tail a) col col
     
     module String =
+
         let split delim str =
             (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toList
 
@@ -74,12 +77,14 @@ module Extensions =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
 
     module Array2D =
-        let inside grid (x, y) =
-            x >= 0 && x < Array2D.length1 grid && y >= 0 && y < Array2D.length2 grid
+
+        let isInside grid (i, j) =
+            i >= 0 && i < Array2D.length1 grid && j >= 0 && j < Array2D.length2 grid
+
         let coordSeq grid = seq {
-            for y in 0 .. Array2D.length2 grid - 1 do
-                for x in 0 .. Array2D.length1 grid - 1 do
-                    yield (x, y)
+            for i in 0 .. Array2D.length1 grid - 1 do
+                for j in 0 .. Array2D.length2 grid - 1 do
+                    yield (i, j)
         }
 
 
