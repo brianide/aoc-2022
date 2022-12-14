@@ -1,19 +1,21 @@
 module Day14
 
+open System
 open System.IO
 open Util.Extensions
-open Util.Math
-open Util.Patterns
 open Util.Plumbing
 
 type Tile = Air | Wall | Sand
 type SandState = Falling | Resting | OffGrid
 
-let drawGrid grid =
+let drawGrid grid limit =
     let getChar = function Air -> '.' | Wall -> '#' | Sand -> 'O'
 
-    for r in 0 .. Array2D.length1 grid - 1 do
-        grid[r, *] |> Seq.iter (getChar >> printf "%c")
+    let limit = if limit <= 0 then System.Int32.MaxValue else limit
+
+    for r in 0 .. min (limit) (Array2D.length1 grid - 1) do
+        grid[r, *]
+        |> Seq.iter (getChar >> printf "%c")
         printfn ""
 
 let parse file =
@@ -31,7 +33,7 @@ let parse file =
         >> Seq.toList
 
     let points = File.ReadAllLines file |> Seq.collect parseLine |> Set.ofSeq
-    let (minx, maxx, height) = Seq.map fst points |> Seq.min, Seq.map fst points |> Seq.max, (Seq.map snd points |> Seq.max) + 3
+    let (minx, maxx, height) = (Seq.map fst points |> Seq.min) - 20, (Seq.map fst points |> Seq.max) + 20, (Seq.map snd points |> Seq.max) + 3
     let width = maxx - minx + 1
     let grid = Array2D.init height width (fun r c -> if Set.contains (c + minx, r) points then Wall else Air)
 
@@ -55,8 +57,8 @@ let dropSand (grid: Tile[,]) x =
         |> Seq.map (fun p -> (p, getState p))
         |> Seq.tryFind (fun (_, state) -> state <> Resting)
         |> function
+        | Some (_, OffGrid) | None -> state <- Resting
         | Some (p, s) -> pos <- p; state <- s
-        | None -> state <- Resting
 
     if state = Resting then
         grid[fst pos, snd pos] <- Sand
@@ -68,14 +70,42 @@ let solveSilver (grid, genx) =
     let mutable count = 0
 
     while not filled do
-        filled <- dropSand grid genx
+        dropSand grid genx |> ignore
+        filled <- grid[0, genx] = Sand
         count <- count + 1
-
-    drawGrid grid
 
     string (count - 1)
 
-let solveGold (grid, genx) =
-    ""
+let solveGold (grid: Tile[,], genx) =
+    let mutable filled = false
+    let mutable count = 0
+
+    let () =
+        let height = Array2D.length1 grid - 1
+        for c in 0 .. Array2D.length2 grid - 1 do
+            grid[height, c] <- Wall
+
+    while not filled do
+        dropSand grid genx |> ignore
+        filled <- grid[0, genx] = Sand
+        count <- count + 1
+
+        // if count % 1 = 0 then
+        //     Console.Clear()
+        //     Console.SetCursorPosition (0, 0)
+        //     drawGrid grid (Console.WindowHeight - 6)
+
+    let outside =
+        let sumTo x = 
+            grid[*, x]
+            |> Seq.tryFindIndex ((=) Sand)
+            |> function
+            | Some n -> seq {1 .. Array2D.length1 grid - n - 2} |> Seq.sum
+            | None -> 0
+        sumTo 0 + sumTo (Array2D.length2 grid - 1)
+
+    // drawGrid grid 0
+
+    count + outside |> string
 
 let Solver = chainSolver parse solveSilver solveGold
