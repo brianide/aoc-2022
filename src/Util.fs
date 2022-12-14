@@ -2,6 +2,7 @@ module Util
 
 open System.Text.RegularExpressions
 
+
 module Plumbing =
 
     type ProblemPart = Silver | Gold
@@ -16,6 +17,7 @@ module Plumbing =
         List.map <| function
         | Silver -> silver input
         | Gold -> gold input
+
 
 module Patterns =
 
@@ -124,3 +126,11 @@ module Collections =
             | Queue (ins, []) ->
                 let outs = List.rev ins
                 (List.head outs, Queue ([], List.tail outs))
+
+
+let formatGrid fmtVal limit grid =
+    let limit = if limit <= 0 then System.Int32.MaxValue else limit
+
+    seq {0 .. min (limit) (Array2D.length1 grid - 1)}
+    |> Seq.map (fun r -> grid[r, *] |> Seq.map fmtVal |> String.concat "") 
+    |> String.concat "\n"
