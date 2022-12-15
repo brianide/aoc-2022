@@ -16,9 +16,11 @@ let parse file =
     |> String.regMatchGroups @"Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)"
     |> Seq.map parseLine
 
-let distance (ax, ay) (bx, by) = abs (bx - ax) + abs (by - ay)
-let add (x, y) (i, j) = (x + i, y + j)
-let mul (x, y) n = (x * n, y * n)
+let inline (.+) (x, y) (i, j) = (x + i, y + j)
+let inline (.-) (x, y) (i, j) = (x - i, y - j)
+let inline (.*) (x, y) n = (x * n, y * n)
+let inline distance (ax, ay) (bx, by) = abs (bx - ax) + abs (by - ay)
+let inline bounds min max n = n >= min && n <= max
 
 let solveSilver input =
     let yval = 2000000
@@ -40,29 +42,27 @@ let solveSilver input =
 
 let solveGold input =
     let limit = 4000000
+    // let limit = 20
     let coverage = Seq.map (fun (spos, bpos) -> (spos, distance spos bpos)) input
     let beacons = input |> Seq.map snd |> Set.ofSeq
 
-    let getShell =
-        let steps = [
-            ((-1, 0), (1, -1))
-            ((0, 1), (1, 1))
-            ((1, 0), (-1, 1))
-            ((0, 1), (-1, -1))
-        ]
-
-        fun (pos, range) -> 
-            let rad = range + 1
-            steps |> Seq.collect (fun (off, step) -> seq {for i in 0 .. range -> mul step i |> add (mul off rad) |> add pos})
-
-    let (px, py) =
+    let xs =
         coverage
-        |> Seq.mapi (fun i s -> (getShell s |> Seq.filter (fun (x, y) -> x >= 0 && x <= limit && y >= 0 && y <= limit), Seq.removeAt i coverage))
-        |> Seq.choose (fun (hull, others) -> Seq.tryFind (fun p -> Seq.exists (fun (spos, srng) -> distance spos p <= srng) others |> not) hull)
-        |> Seq.filter (fun e -> not <| Set.contains e beacons)
-        |> Seq.take 1
-        |> Seq.exactlyOne
+        |> Seq.map (fun ((x, y), rng) -> let xp = x - y in (xp - rng - 1, xp + rng + 1))
+        |> Seq.fold (fun (acc, bcc) (a, b) -> Set.add a acc, Set.add b bcc) (Set.empty, Set.empty)
+        |> fun (a, b) -> Set.intersect a b
 
-    (uint64 px) * 4000000UL + (uint64 py) |> string
+    let ys =
+        coverage
+        |> Seq.map (fun ((x, y), rng) -> let xp = x + y in (xp - rng - 1, xp + rng + 1))
+        |> Seq.fold (fun (acc, bcc) (a, b) -> Set.add a acc, Set.add b bcc) (Set.empty, Set.empty)
+        |> fun (a, b) -> Set.intersect a b
+
+    Seq.allPairs xs ys
+    |> Seq.map (fun (a, b) -> let x = (a + b) / 2 in (x, b - x))
+    |> Seq.filter (fun pc -> not <| Set.contains pc beacons)
+    |> Seq.filter (fun pc -> coverage |> Seq.forall (fun (ps, rng) -> distance pc ps > rng))
+    |> Seq.exactlyOne
+    |> fun (x, y) -> (uint64 x) * 4000000UL + (uint64 y) |> string
 
 let Solver = chainSolver parse solveSilver solveGold
