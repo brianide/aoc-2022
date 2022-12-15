@@ -34,8 +34,8 @@ let distance (ax, ay) (bx, by) = abs (bx - ax) + abs (by - ay)
 let solveSilver input =
     let coverage = Seq.map (fun (spos, bpos) -> spos, distance spos bpos) input
     
-    let axis = 10
-    // let axis = 2000000
+    // let axis = 10
+    let axis = 2000000
 
     let beacons = input |> Seq.map snd |> Seq.filter (fun (_, y) -> y = axis) |> Seq.map fst |> Set.ofSeq
 
@@ -53,7 +53,36 @@ let solveSilver input =
     |> string
 
 let solveGold input =
-    Seq.iter (printfn "%A") input
+    let beacon = (14, 11)
+    let coverage = Seq.mapi (fun i (spos, bpos) -> {|Pos = spos; Range = distance spos bpos; Id = i|}) input
+
+    Seq.allPairs coverage coverage
+    |> Seq.filter (fun (a, b) -> a.Id <> b.Id && distance a.Pos b.Pos <= a.Range + b.Range + 2)
+    |> Seq.iter (printfn "%A")
+
+    // coverage
+    // |> Seq.pairs
+    // |> Seq.filter (fun (a, b) -> distance a.Pos b.Pos <= a.Range + b.Range)
+    // |> Seq.iter (printfn "%A")
+
     ""
+
+// let solveGold input =
+//     let beacon = (14, 11)
+//     let coverage = Seq.map (fun (spos, bpos) -> spos, distance spos bpos) input
+
+//     let drawCoverageDiagram n (pos, rng) =
+//         let fmt x y =
+//             if (x, y) = beacon then
+//                 (240uy, 100uy, 200uy)
+//             elif distance (x, y) pos <= rng then
+//                 (180uy, 120uy, 230uy)
+//             else
+//                 (60uy, 60uy, 60uy)
+
+//         Image.saveToPPM fmt (sprintf "out/test%03d.ppm" n) 20 20
+
+//     Seq.iteri drawCoverageDiagram coverage
+//     ""
 
 let Solver = chainSolver parse solveSilver solveGold

@@ -75,6 +75,13 @@ module Extensions =
 
         let tails col =
             Seq.scan (fun a _ -> Seq.tail a) col col
+
+        let pairs source =
+            tails source
+            |> Seq.map Seq.toList
+            |> Seq.collect (function
+            | head :: rest -> (Seq.map (fun e -> (head, e)) rest)
+            | _ -> [])
     
     module String =
         let split delim str =
