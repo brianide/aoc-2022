@@ -18,6 +18,7 @@ let solvers = [|
     ("12r", Day12.Renderer, "Hill Climbing Algorithm (Render)")
     ("13", Day13.Solver, "Distress Signal")
     ("14", Day14.Solver, "Regolith Reservoir")
+    ("15", Day15.Solver, "Day15")
     //^ new days go here ^
 |]
 
