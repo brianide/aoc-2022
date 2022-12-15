@@ -30,21 +30,27 @@ let getNeighbors (grid: int[,]) (r, c) =
     |> Seq.map (fun (i, j) -> (r + i, c + j))
     |> Seq.filter (Array2D.isInside grid)
 
-let calcDistances valid grid start =
+let calcDistances stepCb valid grid start =
     let mutable explored = Set.singleton start
     let mutable queue = Queue.singleton start
     let mutable dists = Map.ofSeq <| seq {(start, 0)}
 
+    let mutable maxDist = -1
+
     while not (Queue.isEmpty queue) do
         let (r, c), nextQueue = Queue.dequeue queue
         queue <- nextQueue
+
+        let dist = dists[(r, c)] + 1
+        if dist > maxDist then
+            maxDist <- dist
+            stepCb explored grid
 
         getNeighbors grid (r, c)
         |> Seq.filter (fun (i, j) -> valid grid[r, c] grid[i, j])
         |> Seq.filter (fun p -> not <| Seq.contains p explored)
         |> Seq.iter (fun p ->
             explored <- Set.add p explored
-            let dist = dists[(r, c)] + 1
             dists <- Map.add p dist dists
             queue <- Queue.enqueue p queue)
 
@@ -56,7 +62,7 @@ let calcDistances valid grid start =
 
 let prepare file =
     let scen = parse file
-    let dist = calcDistances (fun s d -> d - s >= -1) scen.Grid scen.End
+    let dist = calcDistances (fun _ _ -> ()) (fun s d -> d - s >= -1) scen.Grid scen.End
     (scen, dist)
 
 let solveSilver (scen, dist) =
@@ -71,3 +77,22 @@ let solveGold (scen, dist) =
     |> string
 
 let Solver = chainSolver prepare solveSilver solveGold
+
+let renderFrame =
+    let mutable count = 0
+    fun dir pref explored grid ->
+        let fmt c r h =
+            if Set.contains (r, c) explored then
+                byte (h * 4 + 150)
+            else
+                byte (h * 2 + 68)
+
+        Image.saveToPGM fmt (sprintf "%s/%s%08d.pgm" dir pref count) grid
+        count <- count + 1
+
+let run infile outdir prefix _ =
+    let scen = parse infile
+    ignore <| calcDistances (renderFrame outdir prefix) (fun s d -> d - s >= -1) scen.Grid scen.End
+    ""
+
+let Renderer = renderer run

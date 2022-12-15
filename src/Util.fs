@@ -4,27 +4,38 @@ open System.Text.RegularExpressions
 
 
 module Plumbing =
+    let private (|Parts|) silver gold =
+        function
+        | "silver" -> [silver]
+        | "gold" -> [gold]
+        | "both" -> [silver; gold]
+        | _ -> failwith "Invalid part; expected [silver|gold|both]"
 
-    type ProblemPart = Silver | Gold
+    let simpleSolver silver gold =
+        function
+        | [file; Parts silver gold p] -> Seq.map (fun f -> f file) p |> String.concat "\n"
+        | _ -> failwithf "Invalid args; please specifiy an input file and part"
 
-    let simpleSolver silver gold file =
-        List.map <| function
-        | Silver -> silver file
-        | Gold -> gold file
+    let chainSolver parse silver gold =
+        function
+        | [file; Parts silver gold p] ->
+            let input = parse file
+            Seq.map (fun f -> f input) p |> String.concat "\n"
+        | _ -> failwith "Invalid args"
 
-    let chainSolver parse silver gold file =
-        let input = parse file
-        List.map <| function
-        | Silver -> silver input
-        | Gold -> gold input
+    let renderer func =
+        function
+        | infile :: outdir :: prefix :: args -> func infile outdir prefix args
+        | _ -> failwith "Invalid args; please specify an input file, output dir, and prefix"
 
 
 module Patterns =
-
     let (|Int32|_|) (x: string) =
         try int x |> Some with :? System.FormatException -> None
+
     let (|Int64|_|) (x: string) =
         try int64 x |> Some with :? System.FormatException -> None
+
     let (|RegGroups|_|) patt str =
         let reg = Regex(patt)
         let mat = reg.Match(str)
@@ -46,6 +57,19 @@ module Extensions =
             Seq.mapi (fun i e -> if i >= start && (i - start) % skip = 0 then Some e else None)
             >> Seq.choose id
 
+        let boundsBy f (source: seq<_>) =
+            use e = source.GetEnumerator()
+            if not <| e.MoveNext() then
+                invalidArg "source" "Sequence is empty"
+            let mutable low, hi = e.Current, e.Current
+            while e.MoveNext() do
+                let curr = e.Current
+                if f curr > f hi then hi <- curr
+                if f curr < f low then low <- curr
+            (low, hi)
+
+        let bounds source = boundsBy id source
+
         let sum2 seq =
             Seq.fold (fun (aSum, bSum) (a, b) -> aSum + a, bSum + b) (0, 0) seq
 
@@ -53,7 +77,6 @@ module Extensions =
             Seq.scan (fun a _ -> Seq.tail a) col col
     
     module String =
-
         let split delim str =
             (str: string).Split([|(delim: string)|], System.StringSplitOptions.None) |> Array.toList
 
@@ -79,7 +102,6 @@ module Extensions =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
 
     module Array2D =
-
         let isInside grid (i, j) =
             i >= 0 && i < Array2D.length1 grid && j >= 0 && j < Array2D.length2 grid
 
@@ -91,7 +113,6 @@ module Extensions =
 
 
 module Math =
-
     let inline gcd (a: ^a) (b: ^a) =
         let (zero: ^a) = LanguagePrimitives.GenericZero
         let rec compute (a: ^a) (b: ^a) =
@@ -107,7 +128,6 @@ module Math =
 module Collections =
 
     module Queue =
-
         type Queue<'a> = Queue of 'a list * 'a list
 
         let empty = Queue ([], [])

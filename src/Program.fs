@@ -15,12 +15,13 @@ let solvers = [|
     ("10m", Day10Mutable.Solver, "Cathode-Ray Tube (Mutable)")
     ("11", Day11.Solver, "Monkey in the Middle")
     ("12", Day12.Solver, "Hill Climbing Algorithm")
+    ("12r", Day12.Renderer, "Hill Climbing Algorithm (Render)")
     ("13", Day13.Solver, "Distress Signal")
-    ("14", Day14.Solver, "NewDay")
+    ("14", Day14.Solver, "Regolith Reservoir")
     //^ new days go here ^
 |]
 
-let solveDay day part file =
+let solveDay day args =
     let solver =
         Seq.tryFind (fun (key, _, _) -> key = day) solvers
         |> function
@@ -31,18 +32,11 @@ let solveDay day part file =
             |> String.concat "\n"
             |> failwithf "Invalid day; valid days are:\n%s" 
     
-    let solution =
-        match part with
-        | "silver" -> solver file [Silver]
-        | "gold" -> solver file [Gold]
-        | "both" -> solver file [Silver; Gold]
-        | _ -> failwithf "Invalid part; expected [silver|gold|both]"
-
-    String.concat "\n" solution
+    solver args
 
 [<EntryPoint>]
 let main args =
-    match args with
-    | [| day; inputPath; part|] -> solveDay day part inputPath |> printfn "%s"
+    match args |> Array.toList with
+    | day :: more -> solveDay day more |> printfn "%s"
     | _ -> failwithf "Invalid arg string: %A" args
     0
