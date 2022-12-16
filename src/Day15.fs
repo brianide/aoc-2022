@@ -13,53 +13,76 @@ let parse file =
         | _ -> failwith "Malformed input"
 
     File.ReadAllText file
-    |> String.regMatchGroups @"Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)"
+    |> String.regMatchGroups @"^Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)$"
     |> Seq.map parseLine
 
-let inline (.+) (x, y) (i, j) = (x + i, y + j)
-let inline (.-) (x, y) (i, j) = (x - i, y - j)
-let inline (.*) (x, y) n = (x * n, y * n)
+let inline bounds lo hi n = lo <= n && n <= hi
 let inline distance (ax, ay) (bx, by) = abs (bx - ax) + abs (by - ay)
-let inline bounds min max n = n >= min && n <= max
 
 let solveSilver input =
     let yval = 2000000
-    let coverage = Seq.map (fun (spos, bpos) -> (spos, distance spos bpos)) input
-    let beacons = input |> Seq.map snd |> Seq.filter (fun (_, y) -> y = yval) |> Seq.map fst |> Set.ofSeq
+    // let yval = 10
 
-    let covered =
-        coverage
+    let rangeFold ranges e =
+        match ranges, e with
+        | [], e -> [e]
+        | (lh, rh) :: more, (le, re) when rh >= le -> (lh, re) :: more
+        | ranges, e -> e :: ranges 
+
+    let ranges =
+        input
+        |> Seq.map (fun (spos, bpos) -> (spos, distance spos bpos))
         |> Seq.filter (fun ((_, y), rng) -> abs (y - yval) < rng)
-        |> Seq.collect (fun ((x, y), rng) ->
+        |> Seq.map (fun ((x, y), rng) ->
             let ydiff = abs (y - yval)
             let offset = rng - ydiff
-            seq {x - offset .. x + offset})
-        |> Set.ofSeq
+            (x - offset, x + offset))
+        |> Seq.sortBy fst
+        |> Seq.fold rangeFold []
 
-    Set.difference covered beacons
-    |> Set.count
-    |> string
+    let beacons =
+        input
+        |> Seq.map snd
+        |> Seq.filter (fun (_, y) -> y = yval)
+        |> Seq.map fst
+        |> Seq.distinct
+        |> Seq.filter (fun n -> Seq.exists (fun (lo, hi) -> bounds lo hi n) ranges)
+        |> Seq.length
+
+    (ranges |> Seq.map (fun (lo, hi) -> hi - lo + 1) |> Seq.sum) - beacons |> string
 
 let solveGold input =
     let limit = 4000000
     // let limit = 20
+
     let coverage = Seq.map (fun (spos, bpos) -> (spos, distance spos bpos)) input
     let beacons = input |> Seq.map snd |> Set.ofSeq
 
+    let tilt (x, y) =
+        (x - y, x + y)
+
+    let detilt (a, b) =
+        let x = (a + b) / 2
+        (x, b - x)
+
+    let squareBounds =
+        Seq.map (fun ((x, y), rng) -> (tilt (x - rng - 1, y), tilt (x + rng + 1, y))) coverage
+
     let xs =
-        coverage
-        |> Seq.map (fun ((x, y), rng) -> let xp = x - y in (xp - rng - 1, xp + rng + 1))
+        squareBounds
+        |> Seq.map (Tuple2.map fst)
         |> Seq.fold (fun (acc, bcc) (a, b) -> Set.add a acc, Set.add b bcc) (Set.empty, Set.empty)
         |> fun (a, b) -> Set.intersect a b
 
     let ys =
-        coverage
-        |> Seq.map (fun ((x, y), rng) -> let xp = x + y in (xp - rng - 1, xp + rng + 1))
+        squareBounds
+        |> Seq.map (Tuple2.map snd)
         |> Seq.fold (fun (acc, bcc) (a, b) -> Set.add a acc, Set.add b bcc) (Set.empty, Set.empty)
         |> fun (a, b) -> Set.intersect a b
 
     Seq.allPairs xs ys
-    |> Seq.map (fun (a, b) -> let x = (a + b) / 2 in (x, b - x))
+    |> Seq.map detilt
+    |> Seq.filter (fun (x, y) -> bounds 0 limit x && bounds 0 limit y)
     |> Seq.filter (fun pc -> not <| Set.contains pc beacons)
     |> Seq.filter (fun pc -> coverage |> Seq.forall (fun (ps, rng) -> distance pc ps > rng))
     |> Seq.exactlyOne

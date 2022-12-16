@@ -101,7 +101,7 @@ module Extensions =
             |> Seq.toList
 
         let regMatchGroups patt str =
-            let reg = Regex(patt)
+            let reg = Regex(patt, RegexOptions.Multiline)
             reg.Matches(str)
             |> Seq.map (fun x -> x.Groups |> Seq.tail |> Seq.map (fun x -> x.Value) |> Seq.toList)
 
@@ -118,6 +118,8 @@ module Extensions =
                     yield (i, j)
         }
 
+    module Tuple2 =
+        let map f (a, b) = (f a, f b)
 
 module Math =
     let inline gcd (a: ^a) (b: ^a) =
