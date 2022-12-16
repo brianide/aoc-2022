@@ -2,7 +2,6 @@ module Day15
 
 open System.IO
 open Util.Extensions
-open Util.Math
 open Util.Patterns
 open Util.Plumbing
 
@@ -12,8 +11,8 @@ let parse file =
         | [Int32 sx; Int32 sy; Int32 bx; Int32 by] -> (sx, sy), (bx, by)
         | _ -> failwith "Malformed input"
 
-    File.ReadAllText file
-    |> String.regMatchGroups @"^Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)$"
+    File.ReadAllLines file
+    |> Seq.map (String.regGroups @"^Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)$")
     |> Seq.map parseLine
 
 let inline bounds lo hi n = lo <= n && n <= hi
@@ -51,6 +50,9 @@ let solveSilver input =
         |> Seq.distinct
         |> Seq.filter (fun n -> Seq.exists (fun (lo, hi) -> bounds lo hi n) ranges)
         |> Seq.length
+
+    Seq.iter (printfn "%A") ranges
+    printfn "%A" beacons
 
     // Total of the covered ranges, less the number of beacons in the coverage area
     (ranges |> Seq.map (fun (lo, hi) -> hi - lo + 1) |> Seq.sum) - beacons |> string
