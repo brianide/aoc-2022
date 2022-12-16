@@ -51,8 +51,8 @@ let solveSilver input =
         |> Seq.filter (fun n -> Seq.exists (fun (lo, hi) -> bounds lo hi n) ranges)
         |> Seq.length
 
-    Seq.iter (printfn "%A") ranges
-    printfn "%A" beacons
+    // Seq.iter (printfn "%A") ranges
+    // printfn "%A" beacons
 
     // Total of the covered ranges, less the number of beacons in the coverage area
     (ranges |> Seq.map (fun (lo, hi) -> hi - lo + 1) |> Seq.sum) - beacons |> string

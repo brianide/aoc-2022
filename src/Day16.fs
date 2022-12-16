@@ -51,35 +51,66 @@ let pruneZeroNodes graph =
             |> prune 
     prune graph
 
-let calcNodeCosts graph start =
-    let mutable unvisited = Map.keys graph |> Set.ofSeq
-    let mutable dists =
+let calcNodeCosts (graph: ValveGraph) start =
+    let unvisited = Map.keys graph |> Set.ofSeq
+    let prev = Map.empty
+    let dists =
         Map.keys graph
         |> Seq.map (fun k -> k, if k = start then 0 else System.Int32.MaxValue)
         |> Map.ofSeq
-    let mutable next = Some start
 
-    while Option.isSome next do
-        let curr = Option.get next
-        let currDist = dists[curr]
-        let newCosts = graph[curr] |> snd |> Map.map (fun _ cost -> cost + currDist)
-        dists <- dists |> Map.map (fun k v -> min v (Map.tryFind k newCosts |> Option.defaultValue v))
-        unvisited <- unvisited |> Set.remove curr
+    let rec recur unvisited (dists: Map<string,int>) prev curr =
+        let dist = dists[curr]
+
+        let newDists = snd graph[curr] |> Map.toSeq |> Seq.map (fun (k, cost) -> k, min dists[k] (cost + dist))
+        let dists = Seq.fold (fun acc (k, v) -> Map.add k v acc) dists newDists
+        let unvisited = Set.remove curr unvisited
+
+        let prev = Map.add curr (newDists |> Seq.minBy snd |> fst) prev
 
         if Set.isEmpty unvisited then
-            next <- None
+            prev, dists |> Map.filter (fun k _ -> k <> start)
         else
-            next <- unvisited |> seq |> Seq.map (fun k -> k, dists[k]) |> Seq.minBy snd |> fst |> Some
+            let next = unvisited |> seq |> Seq.minBy (fun k -> dists[k])
+            recur unvisited dists prev next
 
-    dists |> Map.filter (fun k _ -> k <> start)
+    recur unvisited dists prev start |> snd
+
+let flattenGraph graph =
+    Map.keys graph
+    |> Seq.fold (fun acc k -> Map.add k (fst graph[k], calcNodeCosts graph k) acc) Map.empty
+
+let branchSolve (graph: ValveGraph) =
+    let flow = Map.map (fun _ v -> fst v) graph
+    let paths = Map.map (fun _ v -> snd v |> Map.toSeq) graph
+
+    let rec recur curr path nodesLeft timeLeft =
+        if timeLeft <= 0 then
+            Seq.singleton (List.rev path)
+        elif Set.isEmpty nodesLeft then
+            let path = (curr, (flow[curr], 30 - timeLeft)) :: path
+            Seq.singleton (List.rev path)
+        else
+            let path = (curr, (flow[curr], 30 - timeLeft)) :: path
+            paths[curr]
+            |> Seq.filter (fun (k, _) -> Set.contains k nodesLeft)
+            |> Seq.collect (fun (k, cost) -> recur k path (Set.remove k nodesLeft) (timeLeft - cost - 1))
+
+    recur "AA" [] (flow |> Map.filter (fun _ v -> v > 0) |> Map.keys |> Set.ofSeq) 30
 
 let solveSilver input =
-    let pruned = pruneZeroNodes input
-    Seq.fold (fun acc k -> Map.add k (fst acc[k], calcNodeCosts acc k) acc) pruned (Map.keys pruned)
-    |> Map.iter (printfn "%A %A")
+    let perms = Map.keys input |> Seq.filter ((<>) "AA") |> Seq.toList |> List.permutations
+    
+    // Map.iter (fun k (flow, outs) -> printfn "%s: %2d >> %s" k flow (outs |> Map.toSeq |> Seq.map (fun (k, v) -> sprintf "%s %d" k v) |> String.concat ", ")) input
+
+    branchSolve input
+    |> Seq.map (fun n -> n, Seq.sumBy (fun (_, (flow, time)) -> flow * (30 - time)) n)
+    |> Seq.maxBy snd
+    |> printfn "%A"
+    
     ""
 
 let solveGold input =
     ""
 
-let Solver = chainSolver parse solveSilver solveGold
+let Solver = chainSolver (parse >> flattenGraph) solveSilver solveGold

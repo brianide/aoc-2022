@@ -82,6 +82,23 @@ module Extensions =
             |> Seq.collect (function
             | head :: rest -> (Seq.map (fun e -> (head, e)) rest)
             | _ -> [])
+
+    module List =
+        let rec permutations = function
+            | [] -> seq [List.empty]
+            | x :: xs -> Seq.collect (insertions x) (permutations xs)
+        and insertions x = function
+            | [] -> [[x]]
+            | y :: ys as xs -> (x :: xs) :: (List.map (fun x -> y :: x) (insertions x ys)) 
+        // let rec distribute e =
+        //     function
+        //     | [] -> [[e]]
+        //     | x :: rest as xs -> (e :: xs) :: [for xs in distribute e rest -> x :: xs]
+
+        // let rec permute =
+        //     function
+        //     | [] -> [[]]
+        //     | e :: xs -> List.collect (distribute e) (permute xs)
     
     module String =
         let split delim str =

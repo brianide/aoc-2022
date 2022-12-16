@@ -23,22 +23,24 @@ let solvers = [|
     //^ new days go here ^
 |]
 
-let solveDay day args =
-    let solver =
-        Seq.tryFind (fun (key, _, _) -> key = day) solvers
-        |> function
-        | Some (_, s, _) -> s
-        | _ ->
-            solvers
-            |> Seq.map (fun (key, _, name) -> sprintf "%3s: %s" key name)
-            |> String.concat "\n"
-            |> failwithf "Invalid day; valid days are:\n%s" 
+let getSolver day =
+    Seq.tryFind (fun (key, _, _) -> key = day) solvers
+    |> function
+    | Some (_, s, _) -> s
+    | _ ->
+        solvers
+        |> Seq.map (fun (key, _, name) -> sprintf "%3s: %s" key name)
+        |> String.concat "\n"
+        |> failwithf "Invalid day; valid days are:\n%s" 
     
-    solver args
-
 [<EntryPoint>]
 let main args =
     match args |> Array.toList with
-    | day :: more -> solveDay day more |> printfn "%s"
+    | day :: more ->
+        let watch = System.Diagnostics.Stopwatch()
+        watch.Start()
+        let result = getSolver day more
+        watch.Stop()
+        printfn "%s\n\n%ims (%f seconds)" result watch.ElapsedMilliseconds watch.Elapsed.TotalSeconds
     | _ -> failwithf "Invalid arg string: %A" args
     0
