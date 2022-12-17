@@ -26,31 +26,6 @@ let parse file =
     |> Seq.map parseLine
     |> Map.ofSeq
 
-let pruneZeroNodes graph =
-    let rec prune tab =
-        tab
-        |> Map.tryFindKey (fun k (flow, _) -> k <> "AA" && flow = 0)
-        |> function
-        | None -> tab
-        | Some kz ->
-            tab
-            |> Map.toSeq
-            |> Seq.filter (fun (_, (_, outs)) -> Map.containsKey kz outs)
-            |> Seq.map (fun (ks, (flow, outs)) ->
-                let repl =
-                    tab[kz] |> snd |> Map.toSeq
-                    |> Seq.filter (fun (kd, _) -> kd <> ks)
-                    |> Seq.map (fun (k, v) -> k, v + 1)
-                let outs =
-                    outs |> Map.toSeq
-                    |> Seq.filter (fun (dest, _) -> dest <> kz)
-                    |> Seq.append repl
-                    |> Map.ofSeq
-                ks, (flow, outs))
-            |> Seq.fold (fun acc (k, v) -> Map.add k v acc) (Map.filter (fun k _ -> k <> kz) tab)
-            |> prune 
-    prune graph
-
 let calcNodeCosts (graph: ValveGraph) start =
     let unvisited = Map.keys graph |> Set.ofSeq
     let prev = Map.empty
@@ -80,37 +55,51 @@ let flattenGraph graph =
     Map.keys graph
     |> Seq.fold (fun acc k -> Map.add k (fst graph[k], calcNodeCosts graph k) acc) Map.empty
 
-let branchSolve (graph: ValveGraph) =
+let solveGraph time previs (graph: ValveGraph) =
     let flow = Map.map (fun _ v -> fst v) graph
     let paths = Map.map (fun _ v -> snd v |> Map.toSeq) graph
 
     let rec recur curr path nodesLeft timeLeft =
-        if timeLeft <= 0 then
-            Seq.singleton (List.rev path)
-        elif Set.isEmpty nodesLeft then
-            let path = (curr, (flow[curr], 30 - timeLeft)) :: path
+        let path = (curr, (flow[curr], time - timeLeft)) :: path
+        if Set.isEmpty nodesLeft then
             Seq.singleton (List.rev path)
         else
-            let path = (curr, (flow[curr], 30 - timeLeft)) :: path
-            paths[curr]
-            |> Seq.filter (fun (k, _) -> Set.contains k nodesLeft)
-            |> Seq.collect (fun (k, cost) -> recur k path (Set.remove k nodesLeft) (timeLeft - cost - 1))
+            let more =
+                paths[curr]
+                |> Seq.filter (fun (k, c) -> Set.contains k nodesLeft && timeLeft - c - 1 > 0)
+            
+            if Seq.isEmpty more then
+                Seq.singleton(List.rev path)
+            else
+                more
+                |> Seq.collect (fun (k, cost) ->
+                    let timeLeft = timeLeft - cost - 1
+                    if timeLeft >= 0 then
+                        recur k path (Set.remove k nodesLeft) timeLeft
+                    else
+                        [])
 
-    recur "AA" [] (flow |> Map.filter (fun _ v -> v > 0) |> Map.keys |> Set.ofSeq) 30
+    recur "AA" [] (flow |> Map.filter (fun _ v -> v > 0) |> Map.keys |> Set.ofSeq |> fun n -> Set.difference n previs) time
 
 let solveSilver input =
-    let perms = Map.keys input |> Seq.filter ((<>) "AA") |> Seq.toList |> List.permutations
-    
     // Map.iter (fun k (flow, outs) -> printfn "%s: %2d >> %s" k flow (outs |> Map.toSeq |> Seq.map (fun (k, v) -> sprintf "%s %d" k v) |> String.concat ", ")) input
 
-    branchSolve input
+    solveGraph 30 Set.empty input
     |> Seq.map (fun n -> n, Seq.sumBy (fun (_, (flow, time)) -> flow * (30 - time)) n)
     |> Seq.maxBy snd
-    |> printfn "%A"
-    
-    ""
+    |> string
 
 let solveGold input =
-    ""
+    let foo =
+        solveGraph 26 Set.empty input
+        |> Seq.map (fun n -> n |> Seq.map fst |> Set.ofSeq, Seq.sumBy (fun (_, (flow, time)) -> flow * (26 - time)) n)
+        |> Seq.sortByDescending snd
+
+    printfn "%A" (Seq.head foo)
+
+    solveGraph 26 (foo |> Seq.head |> fst) input
+    |> Seq.map (fun n -> n |> Seq.map fst |> Set.ofSeq, Seq.sumBy (fun (_, (flow, time)) -> flow * (26 - time)) n)
+    |> Seq.maxBy snd
+    |> string
 
 let Solver = chainSolver (parse >> flattenGraph) solveSilver solveGold
