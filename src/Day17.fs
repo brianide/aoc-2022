@@ -1,5 +1,6 @@
 module Day17
 
+open System
 open System.IO
 open Util.Extensions
 open Util.Plumbing
@@ -9,111 +10,120 @@ let ChamberWidth = 7
 let Shapes =
     let conv shp =
         (shp: string).Replace(" ", "").Split('\n')
-        |> Seq.rev
-        |> Seq.mapi (fun r row -> Seq.mapi (fun c n -> if n = '#' then [(r, c)] else []) row)
-        |> Seq.collect (Seq.collect id)
-        |> Seq.toList
+        |> Array.map (fun row -> row |> Seq.map (fun n -> if n = '#' then 1 else 0) |> Array.ofSeq)
+        |> array2D
 
     [|
-        "####";
+        "....
+         ....
+         ....
+         ####";
 
-        ".#.
-         ###
-         .#.";
+        "....
+         .#..
+         ###.
+         .#..";
 
-        "..#
-         ..#
-         ###";
+        "....
+         ..#.
+         ..#.
+         ###.";
 
-        "#
-         #
-         #
-         #";
+        "#...
+         #...
+         #...
+         #...";
         
-        "##
-         ##";
+        "....
+         ....
+         ##..
+         ##..";
     |]
     |> Array.map conv
 
-type Side =
-| Left = 0uy
-| Right = 1uy
-
 let parse file =
     File.ReadAllText file
-    |> Seq.map (function '<' -> Side.Left | '>' -> Side.Right | _ -> failwith "Invalid input")
+    |> Seq.map (function '<' -> -1 | '>' -> 1 | _ -> failwith "Invalid input")
     |> Seq.toArray
 
-let inline (.+) (ax, ay) (bx, by) = (ax + bx, ay + by)
+type Tower = {
+    Grid: byte[]
+    mutable LocalHeight: int
+    mutable TotalHeight: uint64
+}
 
-let dropShape (jets: Side[]) jetIndex (tower, height) shape =
-    let checkCollide shape =
-        let outside =
-            let bottom = List.map fst shape |> List.min
-            let cols = List.map snd shape
-            bottom < 0 || List.min cols < 0 || List.max cols >= ChamberWidth
+module Fast = // ...in a relative sense
 
-        outside || List.exists (fun p -> Set.contains p tower) shape
+    let inline (.+) struct(ax, ay) struct(bx, by) = struct(ax + bx, ay + by)
+    let inline modIndex (arr: ^a[]) n = arr[n % arr.Length]
 
-    let rec fall ind shape =
-        let shift =
-            match jets[ind % jets.Length] with
-            | Side.Left -> (0, -1)
-            | Side.Right -> (0, 1)
-            | c -> failwithf "Invalid jet value: %A" c
+    let checkCollision (shape: int[,]) (grid: byte[]) struct(pr, pc) =
+        let rec check n =
+            if pr < 0 || pc < 0 || pc >= ChamberWidth then
+                true
+            elif n >= 4 * 4 then
+                false
+            else
+                let r = n / 4
+                let c = n % 4
+                let pr = pr + r
+                let pc = pc + c
+                shape[r, c] = 1 && pr < 0
+                    || pc >= ChamberWidth
+                    || (grid[pr] &&& (1uy >>> c) > 0uy)
+                    || check (n + 1)
+        check 0
 
-        let shape' = shape |> List.map (fun p -> p .+ shift)
-        let shape = if checkCollide shape' then shape else shape'
+    let blit (shape: int[,]) (grid: byte[]) struct(pr, pc) =
+        for r in 0 .. 3 do
+            for c in 0 .. 3 do
+                if c + pc < ChamberWidth && shape[r, c] = 1 then
+                    grid[r + pr] <- grid[r + pr] ||| (1uy >>> c)
 
-        let shape' = shape |> List.map (fun p -> p .+ (-1, 0))
-        if checkCollide shape' then
-            let tower = Set.union tower (Set.ofList shape)
-            let height = max height ((List.map fst shape |> List.max) + 1)
-            ind + 1, (tower, height)
-        else
-            // for r in height + 5 .. -1 .. 0 do
-            //     for c in 0 .. 6 do
-            //         printf "%c" (if Set.contains (r, c) tower then '#' elif List.contains (r, c) shape' then '@' else '.')
-            //     printfn ""
-            // printfn ""
-            fall (ind + 1) shape'
+    let solve dropCount (jets: int[]) =
 
-    let origin = (height + 3, 2)
+        let tower = {
+            Grid = Array.zeroCreate<byte> 8000
+            LocalHeight = 0
+            TotalHeight = 0UL
+        }
 
-    shape
-    |> List.map (fun c -> c .+ origin)
-    |> fall jetIndex
+        let mutable jetIndex = 0
+        let mutable shapeIndex = 0
 
-let solveSilver jets =
-    let rec drop tower jetIndex shapeIndex =
-        // let () =
-        //     let (blocks, height) = tower
-            // printfn "%A %A:" shapeIndex height
-            // for r in height .. -1 .. 0 do
-            //     for c in 0 .. 6 do
-            //         printf "%c" (if Set.contains (r, c) blocks then '#' else '.')
-            //     printfn ""
-            // printfn ""
-            // printfn "%A" blocks
+        for _ in 1UL .. dropCount do
+            let shape = modIndex Shapes shapeIndex
+            shapeIndex <- shapeIndex + 1
 
-        if shapeIndex = 2022 then
-            tower
-        else
-            let jetIndex, tower = dropShape jets jetIndex tower Shapes[shapeIndex % Shapes.Length]
-            drop tower jetIndex (shapeIndex + 1)
-    
-    let (final, height) = drop (Set.empty, 0) 0 0
+            let mutable pos = struct (tower.LocalHeight + 3, 2)
+            let mutable falling = true
 
-    for r in 0 .. height do
-        [for c in 0 .. 6 -> (r, c)]
-        |> List.forall (fun p -> Set.contains p final)
-        |> fun b -> if b then printfn "%A" r
+            while falling do
+                let shift = modIndex jets jetIndex
+                jetIndex <- jetIndex + 1
 
-    // printfn "%A" height
-    // Image.saveToPPM   
-    "" 
+                let newPos = pos .+ struct(0, shift)
+                if not <| checkCollision shape tower.Grid newPos then
+                    pos <- newPos
+                
+                let newPos = pos .+ struct(-1, 0)
+                if checkCollision shape tower.Grid newPos then
+                    blit shape tower.Grid pos
+                    tower.LocalHeight <- Array.findIndex (fun n -> n <> 0uy) tower.Grid
+                    falling <- false
 
-let solveGold input =
-    ""
+                    printfn "Placed at %A; new height %A" pos tower.LocalHeight 
+                else
+                    pos <- newPos
+
+        for i in 0 .. 10 do
+            printfn "%07B" tower.Grid[i]
+
+        ""
+
+
+let solveSilver = Fast.solve 5UL
+
+let solveGold = Fast.solve 1000000000000UL
 
 let Solver = chainSolver parse solveSilver solveGold
