@@ -6,16 +6,27 @@ open Util.Extensions
 open Util.Plumbing
 
 let ChamberWidth = 7
-let GridMax = 8000
-let Threshold = 1000
+let GridMax = 2000
+let Threshold = 0
+
+[<Struct>]
+type Shape = {
+    Points: struct(int * int)[]
+    Width: int
+    Height: int
+}
 
 let Shapes =
     let conv shp =
-        (shp: string).Replace(" ", "").Split('\n')
-        |> Seq.rev
-        |> Seq.mapi (fun r row -> row |> Seq.mapi (fun c n -> if n = '#' then [struct(r, c)] else []) |> Array.ofSeq)
-        |> Seq.collect(Seq.collect id)
-        |> Seq.toArray
+        let points =
+            (shp: string).Replace(" ", "").Split('\n')
+            |> Seq.rev
+            |> Seq.mapi (fun r row -> row |> Seq.mapi (fun c n -> if n = '#' then [struct(r, c)] else []) |> Array.ofSeq)
+            |> Seq.collect(Seq.collect id)
+            |> Seq.toArray
+        let width = points |> Seq.map (fun struct(_, c) -> c) |> Seq.max
+        let height = points |> Seq.map (fun struct(r, _) -> r) |> Seq.max
+        {Points = points; Width = width; Height = height}
 
     [|
         "####";
@@ -56,15 +67,33 @@ module Fast = // ...in a relative sense
     let inline modIndex (arr: ^a[]) n = arr[n % arr.Length]
     let inline bounds lo hi n = lo <= n && n <= hi
 
-    let checkCollision shape (grid: bool[,]) pos =
-        shape
-        |> Seq.map (fun off -> pos .+ off)
-        |> Seq.exists (fun struct(r, c) -> r < 0 || not (bounds 0 (ChamberWidth - 1) c) || grid[r, c])
+    let jetShift (shape: Shape) (jets: int[]) jetIndex struct(r, c) =
+        let mutable left = 0
+        let mutable right = 0
+        for i in 0 .. 2 do
+            if jets[(jetIndex + i) % 3] > 0 then
+                left <- left + 1
+            else
+                right <- right + 1
 
-    let blit shape (grid: bool[,]) pos =
-        let points = shape |> Seq.map (fun off -> pos .+ off)
-        points |> Seq.iter (fun struct(r, c) -> grid[r, c] <- true)
-        points |> Seq.map (fun struct(r, _) -> r) |> Seq.max
+        let newC = min (c + right) (ChamberWidth - 1 - shape.Width)
+        let newC = max 0 newC
+        struct(r, newC)
+
+    let checkHorizontal (shape: Shape) (grid: bool[,]) pos =
+        shape.Points
+        |> Array.map (fun off -> pos .+ off)
+        |> Array.exists (fun struct(r, c) -> not (bounds 0 (ChamberWidth - 1) c) || grid[r, c])
+
+    let checkVertical (shape: Shape) (grid: bool[,]) pos =
+        shape.Points
+        |> Array.map (fun off -> pos .+ off)
+        |> Array.exists (fun struct(r, c) -> r < 0 || grid[r, c])
+
+    let blit (shape: Shape) (grid: bool[,]) pos =
+        let points = shape.Points |> Array.map (fun off -> pos .+ off)
+        points |> Array.iter (fun struct(r, c) -> grid[r, c] <- true)
+        points |> Array.map (fun struct(r, _) -> r) |> Array.max
 
     let solve dropCount (jets: int[]) =
 
@@ -89,18 +118,18 @@ module Fast = // ...in a relative sense
                 jetIndex <- jetIndex + 1
 
                 let pos' = pos .+ struct(0, shift)
-                if not <| checkCollision shape tower.Grid pos' then
+                if not <| checkHorizontal shape tower.Grid pos' then
                     pos <- pos'
-                
+
                 let pos' = pos .+ struct(-1, 0)
-                if checkCollision shape tower.Grid pos' then
+                if checkVertical shape tower.Grid pos' then
                     falling <- false
-                    let blockHeight = 1 + blit shape tower.Grid pos
+                    let blockHeight = blit shape tower.Grid pos
                     let oldLocalHeight = tower.LocalHeight
-                    tower.LocalHeight <- max tower.LocalHeight blockHeight
+                    tower.LocalHeight <- 1 + max tower.LocalHeight blockHeight
                     tower.TotalHeight <- tower.TotalHeight + uint64 (tower.LocalHeight - oldLocalHeight)
                     
-                    seq {blockHeight + 2 .. -1 .. blockHeight - 2}
+                    {blockHeight .. -1 .. blockHeight - 1}
                     |> Seq.tryFind (fun r -> r > 0 && tower.Grid[r, *] |> Array.forall id)
                     |> Option.filter (fun r -> r > Threshold)
                     |> function
