@@ -6,38 +6,35 @@ open Util.Extensions
 open Util.Plumbing
 
 let ChamberWidth = 7
+let GridMax = 8000
+let Threshold = 1000
 
 let Shapes =
     let conv shp =
         (shp: string).Replace(" ", "").Split('\n')
-        |> Array.map (fun row -> row |> Seq.map (fun n -> if n = '#' then 1 else 0) |> Array.ofSeq)
-        |> array2D
+        |> Seq.rev
+        |> Seq.mapi (fun r row -> row |> Seq.mapi (fun c n -> if n = '#' then [struct(r, c)] else []) |> Array.ofSeq)
+        |> Seq.collect(Seq.collect id)
+        |> Seq.toArray
 
     [|
-        "....
-         ....
-         ....
-         ####";
+        "####";
 
-        "....
-         .#..
-         ###.
-         .#..";
+        ".#.
+         ###
+         .#.";
 
-        "....
-         ..#.
-         ..#.
-         ###.";
+        "..#
+         ..#
+         ###";
 
-        "#...
-         #...
-         #...
-         #...";
+        "#
+         #
+         #
+         #";
         
-        "....
-         ....
-         ##..
-         ##..";
+        "##
+         ##";
     |]
     |> Array.map conv
 
@@ -47,7 +44,7 @@ let parse file =
     |> Seq.toArray
 
 type Tower = {
-    Grid: byte[]
+    mutable Grid: bool[,]
     mutable LocalHeight: int
     mutable TotalHeight: uint64
 }
@@ -55,35 +52,24 @@ type Tower = {
 module Fast = // ...in a relative sense
 
     let inline (.+) struct(ax, ay) struct(bx, by) = struct(ax + bx, ay + by)
+    let inline (.*) struct(ax, ay) n = struct(ax * n, ay * n)
     let inline modIndex (arr: ^a[]) n = arr[n % arr.Length]
+    let inline bounds lo hi n = lo <= n && n <= hi
 
-    let checkCollision (shape: int[,]) (grid: byte[]) struct(pr, pc) =
-        let rec check n =
-            if pr < 0 || pc < 0 || pc >= ChamberWidth then
-                true
-            elif n >= 4 * 4 then
-                false
-            else
-                let r = n / 4
-                let c = n % 4
-                let pr = pr + r
-                let pc = pc + c
-                shape[r, c] = 1 && pr < 0
-                    || pc >= ChamberWidth
-                    || (grid[pr] &&& (1uy >>> c) > 0uy)
-                    || check (n + 1)
-        check 0
+    let checkCollision shape (grid: bool[,]) pos =
+        shape
+        |> Seq.map (fun off -> pos .+ off)
+        |> Seq.exists (fun struct(r, c) -> r < 0 || not (bounds 0 (ChamberWidth - 1) c) || grid[r, c])
 
-    let blit (shape: int[,]) (grid: byte[]) struct(pr, pc) =
-        for r in 0 .. 3 do
-            for c in 0 .. 3 do
-                if c + pc < ChamberWidth && shape[r, c] = 1 then
-                    grid[r + pr] <- grid[r + pr] ||| (1uy >>> c)
+    let blit shape (grid: bool[,]) pos =
+        let points = shape |> Seq.map (fun off -> pos .+ off)
+        points |> Seq.iter (fun struct(r, c) -> grid[r, c] <- true)
+        points |> Seq.map (fun struct(r, _) -> r) |> Seq.max
 
     let solve dropCount (jets: int[]) =
 
         let tower = {
-            Grid = Array.zeroCreate<byte> 8000
+            Grid = Array2D.zeroCreate<bool> GridMax ChamberWidth
             LocalHeight = 0
             TotalHeight = 0UL
         }
@@ -102,27 +88,40 @@ module Fast = // ...in a relative sense
                 let shift = modIndex jets jetIndex
                 jetIndex <- jetIndex + 1
 
-                let newPos = pos .+ struct(0, shift)
-                if not <| checkCollision shape tower.Grid newPos then
-                    pos <- newPos
+                let pos' = pos .+ struct(0, shift)
+                if not <| checkCollision shape tower.Grid pos' then
+                    pos <- pos'
                 
-                let newPos = pos .+ struct(-1, 0)
-                if checkCollision shape tower.Grid newPos then
-                    blit shape tower.Grid pos
-                    tower.LocalHeight <- Array.findIndex (fun n -> n <> 0uy) tower.Grid
+                let pos' = pos .+ struct(-1, 0)
+                if checkCollision shape tower.Grid pos' then
                     falling <- false
+                    let blockHeight = 1 + blit shape tower.Grid pos
+                    let oldLocalHeight = tower.LocalHeight
+                    tower.LocalHeight <- max tower.LocalHeight blockHeight
+                    tower.TotalHeight <- tower.TotalHeight + uint64 (tower.LocalHeight - oldLocalHeight)
+                    
+                    seq {blockHeight + 2 .. -1 .. blockHeight - 2}
+                    |> Seq.tryFind (fun r -> r > 0 && tower.Grid[r, *] |> Array.forall id)
+                    |> Option.filter (fun r -> r > Threshold)
+                    |> function
+                    | Some tet ->
+                        // printfn "Tetris at %A" tet
+                        let temp = tower.Grid
+                        tower.Grid <- Array2D.zeroCreate<bool> GridMax ChamberWidth
 
-                    printfn "Placed at %A; new height %A" pos tower.LocalHeight 
+                        let linesAbove = tower.LocalHeight - tet
+                        let width = ChamberWidth - 1
+
+                        tower.Grid[0 .. linesAbove, 0 .. width] <- temp[tet .. tet + linesAbove, 0 .. width]
+                        tower.LocalHeight <- linesAbove
+                    | None -> ()
                 else
-                    pos <- newPos
+                    pos <- pos'
 
-        for i in 0 .. 10 do
-            printfn "%07B" tower.Grid[i]
-
-        ""
+        tower.TotalHeight |> string
 
 
-let solveSilver = Fast.solve 5UL
+let solveSilver = Fast.solve 2022UL
 
 let solveGold = Fast.solve 1000000000000UL
 
