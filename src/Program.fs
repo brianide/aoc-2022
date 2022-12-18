@@ -21,6 +21,7 @@ let solvers = [|
     ("15", Day15.Solver, "Day15")
     ("16", Day16.Solver, "Day16")
     ("17", Day17.Solver, "Pyroclastic Flow")
+    ("18", Day18.Solver, "Day18")
     //^ new days go here ^
 |]
 

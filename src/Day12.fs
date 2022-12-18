@@ -87,7 +87,7 @@ let renderFrame =
             else
                 byte (h * 2 + 68)
 
-        Image.saveToPGM fmt (sprintf "%s/%s%08d.pgm" dir pref count) grid
+        // Image.saveToPGM fmt (sprintf "%s/%s%08d.pgm" dir pref count) grid
         count <- count + 1
 
 let run infile outdir prefix _ =
