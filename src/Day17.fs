@@ -1,13 +1,12 @@
 module Day17
 
-open System
+open System.Diagnostics
 open System.IO
 open Util.Extensions
 open Util.Plumbing
 
 let ChamberWidth = 7
-let GridMax = 2000
-let Threshold = 0
+let GridHeight = 6000
 
 [<Struct>]
 type Shape = {
@@ -24,8 +23,8 @@ let Shapes =
             |> Seq.mapi (fun r row -> row |> Seq.mapi (fun c n -> if n = '#' then [struct(r, c)] else []) |> Array.ofSeq)
             |> Seq.collect(Seq.collect id)
             |> Seq.toArray
-        let width = points |> Seq.map (fun struct(_, c) -> c) |> Seq.max
-        let height = points |> Seq.map (fun struct(r, _) -> r) |> Seq.max
+        let width = 1 + (points |> Seq.map (fun struct(_, c) -> c) |> Seq.max)
+        let height = 1 + (points |> Seq.map (fun struct(r, _) -> r) |> Seq.max)
         {Points = points; Width = width; Height = height}
 
     [|
@@ -67,19 +66,6 @@ module Fast = // ...in a relative sense
     let inline modIndex (arr: ^a[]) n = arr[n % arr.Length]
     let inline bounds lo hi n = lo <= n && n <= hi
 
-    let jetShift (shape: Shape) (jets: int[]) jetIndex struct(r, c) =
-        let mutable left = 0
-        let mutable right = 0
-        for i in 0 .. 2 do
-            if jets[(jetIndex + i) % 3] > 0 then
-                left <- left + 1
-            else
-                right <- right + 1
-
-        let newC = min (c + right) (ChamberWidth - 1 - shape.Width)
-        let newC = max 0 newC
-        struct(r, newC)
-
     let checkHorizontal (shape: Shape) (grid: bool[,]) pos =
         shape.Points
         |> Array.map (fun off -> pos .+ off)
@@ -98,15 +84,16 @@ module Fast = // ...in a relative sense
     let solve dropCount (jets: int[]) =
 
         let tower = {
-            Grid = Array2D.zeroCreate<bool> GridMax ChamberWidth
+            Grid = Array2D.zeroCreate<bool> GridHeight ChamberWidth
             LocalHeight = 0
             TotalHeight = 0UL
         }
 
         let mutable jetIndex = 0
         let mutable shapeIndex = 0
+        let mutable tetri = List.singleton (0UL, 0UL)
 
-        for _ in 1UL .. dropCount do
+        for cycle in 1UL .. dropCount do
             let shape = modIndex Shapes shapeIndex
             shapeIndex <- shapeIndex + 1
 
@@ -114,6 +101,12 @@ module Fast = // ...in a relative sense
             let mutable falling = true
 
             while falling do
+                // for r in tower.LocalHeight + 3 .. -1 .. 0 do
+                //     for c in 0 .. ChamberWidth - 1 do
+                //         printf "%c" (if tower.Grid[r, c] then '#' elif pos = struct(r, c) then '@' else '.')
+                //     printfn ""
+                // printfn ""
+
                 let shift = modIndex jets jetIndex
                 jetIndex <- jetIndex + 1
 
@@ -124,19 +117,21 @@ module Fast = // ...in a relative sense
                 let pos' = pos .+ struct(-1, 0)
                 if checkVertical shape tower.Grid pos' then
                     falling <- false
-                    let blockHeight = blit shape tower.Grid pos
+                    let blockHeight = 1 + blit shape tower.Grid pos
                     let oldLocalHeight = tower.LocalHeight
-                    tower.LocalHeight <- 1 + max tower.LocalHeight blockHeight
+                    tower.LocalHeight <- max tower.LocalHeight blockHeight
                     tower.TotalHeight <- tower.TotalHeight + uint64 (tower.LocalHeight - oldLocalHeight)
+
+                    // printf "%i" (tower.LocalHeight - oldLocalHeight)
                     
                     {blockHeight .. -1 .. blockHeight - 1}
                     |> Seq.tryFind (fun r -> r > 0 && tower.Grid[r, *] |> Array.forall id)
-                    |> Option.filter (fun r -> r > Threshold)
                     |> function
                     | Some tet ->
                         // printfn "Tetris at %A" tet
+                        tetri <- (cycle, tower.TotalHeight) :: tetri
                         let temp = tower.Grid
-                        tower.Grid <- Array2D.zeroCreate<bool> GridMax ChamberWidth
+                        tower.Grid <- Array2D.zeroCreate<bool> GridHeight ChamberWidth
 
                         let linesAbove = tower.LocalHeight - tet
                         let width = ChamberWidth - 1
@@ -147,10 +142,20 @@ module Fast = // ...in a relative sense
                 else
                     pos <- pos'
 
+            // for r in tower.LocalHeight .. -1 .. 0 do
+            //     for c in 0 .. ChamberWidth - 1 do
+            //         printf "%c" (if tower.Grid[r, c] then '#' else '.')
+            //     printfn ""
+            // printfn ""
+
+        tetri
+        |> Seq.pairwise
+        |> Seq.map (fun ((acyc, aheight), (bcyc, bheight)) -> acyc, (aheight - bheight))
+        |> Seq.iter (printfn "%A")
+
         tower.TotalHeight |> string
 
-
-let solveSilver = Fast.solve 2022UL
+let solveSilver = Fast.solve 10000UL
 
 let solveGold = Fast.solve 1000000000000UL
 
