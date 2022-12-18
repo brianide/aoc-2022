@@ -6,7 +6,7 @@ open Util.Extensions
 open Util.Patterns
 open Util.Plumbing
 
-// Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
+#nowarn "25"
 
 type ValveGraph = Map<string, int * Map<string, int>>
 

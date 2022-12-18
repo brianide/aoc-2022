@@ -36,20 +36,29 @@ let getBounds points margin =
     (minx, miny, minz), (maxx, maxy, maxz)
 
 let calcArea points =
+    // Get a bounding box around the droplet with a margin of "air" one unit wide
     let (lower, upper) = getBounds points 1
 
+    // BFS starting from the bottom corner of the bounding box. We use the same
+    // neighbor selector from the first half of the problem; nodes constituent to
+    // the droplet (ie. in the set of points) are tallied up, while "air" nodes
+    // are queued.
     let rec recur explored queue area =
         if Queue.isEmpty queue then
-            (area, explored)
+            area
         else
             let (next, queue) = Queue.dequeue queue
+            
+            // Find neighbors inside the bounding box
             let matter, air =
                 neighbors next
                 |> List.filter (fun p -> bounds lower upper p)
                 |> List.partition (fun p -> Set.contains p points)
 
+            // Tally neighboring matter tiles
             let area = area + List.length matter
 
+            // Queue neighboring air tiles
             let air = List.filter (fun p -> not <| Set.contains p explored) air
             let explored = List.fold (fun acc p -> Set.add p acc) explored air
             let queue = List.fold (fun acc p -> Queue.enqueue p acc) queue air
@@ -62,8 +71,6 @@ let calcArea points =
     
 
 
-let solveGold points =
-    calcArea points
-    |> string
+let solveGold = calcArea >> string
 
 let Solver = chainSolver parse solveSilver solveGold
