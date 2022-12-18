@@ -4,27 +4,23 @@ open System.Text.RegularExpressions
 
 
 module Plumbing =
-    let private (|Parts|) silver gold =
-        function
+    let private (|Parts|) silver gold = function
         | "silver" -> [silver]
         | "gold" -> [gold]
         | "both" -> [silver; gold]
         | _ -> failwith "Invalid part; expected [silver|gold|both]"
 
-    let simpleSolver silver gold =
-        function
+    let simpleSolver silver gold = function
         | [file; Parts silver gold p] -> Seq.map (fun f -> f file) p |> String.concat "\n"
         | _ -> failwithf "Invalid args; please specifiy an input file and part"
 
-    let chainSolver parse silver gold =
-        function
+    let chainSolver parse silver gold = function
         | [file; Parts silver gold p] ->
             let input = parse file
             Seq.map (fun f -> f input) p |> String.concat "\n"
         | _ -> failwith "Invalid args"
 
-    let renderer func =
-        function
+    let renderer func = function
         | infile :: outdir :: prefix :: args -> func infile outdir prefix args
         | _ -> failwith "Invalid args; please specify an input file, output dir, and prefix"
 
@@ -153,16 +149,21 @@ module Collections =
 
         let isEmpty = function Queue ([], []) -> true | _ -> false
 
+        let contains e = function
+            | Queue (ins, outs) -> List.contains e ins || List.contains e outs
+
         let enqueue e q =
             match q with Queue (ins, outs) -> Queue(e :: ins, outs)
         
-        let dequeue =
-            function
+        let dequeue = function
             | Queue ([], []) -> failwith "No elements remaining"
             | Queue (ins, e :: outs) -> (e, Queue (ins, outs))
             | Queue (ins, []) ->
                 let outs = List.rev ins
                 (List.head outs, Queue ([], List.tail outs))
+
+        let toSeq = function
+            | Queue (ins, outs) -> Seq.append outs (List.rev ins)
 
 
 let formatGrid fmtVal limit grid =
