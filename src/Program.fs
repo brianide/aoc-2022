@@ -18,10 +18,11 @@ let solvers = [|
     ("12r", Day12.Renderer, "Hill Climbing Algorithm (Render)")
     ("13", Day13.Solver, "Distress Signal")
     ("14", Day14.Solver, "Regolith Reservoir")
-    ("15", Day15.Solver, "Day15")
-    ("16", Day16.Solver, "Day16")
+    ("15", Day15.Solver, "Beacon Exclusion Zone")
+    ("16", Day16.Solver, "Proboscidea Volcanium")
     ("17", Day17.Solver, "Pyroclastic Flow")
-    ("18", Day18.Solver, "Day18")
+    ("18", Day18.Solver, "Boiling Boulders")
+    ("19", Day19.Solver, "Day19")
     //^ new days go here ^
 |]
 
