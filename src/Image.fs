@@ -34,4 +34,4 @@ let saveToPPM width height path byteFn =
         body[i * 3 + offset + 1] <- green
         body[i * 3 + offset + 2] <- blue
 
-    File.WriteAllBytes(path, body)
+    File.WriteAllBytesAsync(path, body)

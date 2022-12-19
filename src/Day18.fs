@@ -1,6 +1,7 @@
 module Day18
 
 open System.IO
+open System.Threading.Tasks
 open Util.Collections
 open Util.Extensions
 open Util.Patterns
@@ -37,8 +38,8 @@ let getBounds points margin =
     (minx, miny, minz), (maxx, maxy, maxz)
 
 let renderFrame =
-    let mutable count = 0
     let mutable dlast = -1
+    let mutable count = -1
 
     let cExplored = Image.intToRGB 0x54ca5f
     let cQueued = Image.intToRGB 0x44864a
@@ -53,28 +54,36 @@ let renderFrame =
         let twidth = 1 + owidth * 7
         let theight = 1 + owidth * 3
 
-        if true then
-            let queued = Queue.toSeq queue |> Seq.map fst |> Set.ofSeq
-            Image.saveToPPM twidth theight (sprintf @"out/drop%08d.ppm" count)
-            <| fun c r ->
-                if c % owidth = 0 || r % oheight = 0 then
-                    cBorder
-                else
-                    let layer = (c - 1) / owidth + ((r - 1) / oheight * 7)
-                    let xloc, zloc = c % owidth - 2, r % oheight - 2
-                    match (xloc, layer, zloc) with
-                    | p when Set.contains p queued -> cQueued
-                    | p when Set.contains p explored -> cExplored
-                    | p when Set.contains p points -> cMatter
-                    | _ -> cBack
-
+        if depth > dlast then
+            count <- count + 1
             dlast <- depth
-            count <- count + 1 
+
+            let count = count
+            task {
+                let queued = Queue.toSeq queue |> Seq.map fst |> Set.ofSeq
+                return! Image.saveToPPM twidth theight (sprintf @"out3/drop%08d.ppm" count)
+                <| fun c r ->
+                    if c % owidth = 0 || r % oheight = 0 then
+                        cBorder
+                    else
+                        let layer = (c - 1) / owidth + ((r - 1) / oheight * 7)
+                        let xloc, zloc = c % owidth - 2, r % oheight - 2
+                        match (xloc, layer, zloc) with
+                        | p when Set.contains p queued -> cQueued
+                        | p when Set.contains p explored -> cExplored
+                        | p when Set.contains p points -> cMatter
+                        | _ -> cBack
+            }
+        else
+            task {
+                ()
+            }
 
 let calcArea points =
     // Get a bounding box around the droplet with a margin of "air" one unit wide
     let (lower, upper) = getBounds points 3
 
+    let mutable tasks = List.empty
     printfn "%A" (upper .+ negate lower)
 
     // BFS starting from the bottom corner of the bounding box. We use the same
@@ -93,7 +102,7 @@ let calcArea points =
                 bounds lower upper next
 
             if drawable then
-                renderFrame lower upper points depth explored queue
+                tasks <- renderFrame lower upper points depth explored queue :: tasks
 
             // Find neighbors inside the bounding box
             let matter, air =
@@ -114,12 +123,11 @@ let calcArea points =
     let center =
         let (a, b, c) = upper
         let (x, y, z) = lower
-        ((a + x) / 2, y, (c + z) / 2)
+        ((a + x) / 2, (b + y) / 2, (c + z) / 2)
     let explored = Set.singleton center
     let queue = Queue.singleton (center, 0)
-    recur explored queue 0
-    
-
+    let area = recur explored queue 0
+    tasks |> List.map (fun t -> t.Result)
 
 let solveGold = calcArea >> string
 
