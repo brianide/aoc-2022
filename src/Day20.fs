@@ -5,28 +5,33 @@ open Util.Extensions
 open Util.Plumbing
 
 [<Struct>]
-type Digit = { Value: int64; Order: int }
+type Number = { Value: int64; Order: int }
 
 let parse =
     File.ReadAllLines
     >> Array.map int
     >> Array.mapi (fun i v -> { Value = v; Order = i})
 
-let shiftNumbers (cipher: Digit[]) =
+let shiftNumbers (cipher: Number[]) =
+    let modNum = cipher.LongLength - 1L
+
     for n in 0 .. cipher.Length - 1 do
         let src = Array.findIndex (fun v -> v.Order = n) cipher
-        let dig = cipher[src]
+        let num = cipher[src]
 
-        let dst = ((int64 src + dig.Value) % (cipher.LongLength - 1L) + (cipher.LongLength - 1L)) % (cipher.LongLength - 1L) |> int
+        // Figure out the destination; repetition of modulus accounts for multi-wrapping with large numbers
+        let dst = ((int64 src + num.Value) % modNum + modNum) % modNum |> int
 
+        // Shift other array nodes around to accomidate the number's new location
         if src < dst then
             for i in src .. dst - 1 do
                 cipher[i] <- cipher[i + 1]
-            cipher[dst] <- dig
+            cipher[dst] <- num
         elif src > dst then
             for i in src .. -1 .. dst + 1 do
                 cipher[i] <- cipher[i - 1]
-            cipher[dst] <- dig
+            cipher[dst] <- num
+            
     cipher
 
 let getCoords cipher =
