@@ -2,6 +2,7 @@ module Day19
 
 open System.Collections.Generic
 open System.IO
+open Util.Collections
 open Util.Extensions
 open Util.Math
 open Util.Patterns
@@ -12,22 +13,16 @@ open Util.Plumbing
 type Resource =
     Ore | Clay | Obsidian | Geode
     static member Each = [Ore; Clay; Obsidian; Geode]
+    static member EmptyMap = Seq.replicate 4 0 |> Seq.zip Resource.Each |> Map.ofSeq
 
+// type Inventory = Map<Resource, int>
+// type CostSpec = Map<Resource, int>
+// type Blueprint = {Id: int; Costs: Map<Resource, CostSpec>; MaxCosts: Map<Resource, int>}
+// type Strategy = Build of Resource | Wait
 type Inventory = Map<Resource, int>
 type CostSpec = Resource * int
-type Blueprint = {Id: int; Costs: Map<Resource, CostSpec list>}
-
+type Blueprint = {Id: int; Costs: Map<Resource, CostSpec list>; MaxCosts: Map<Resource, int>}
 type Strategy = Build of Resource | Wait
-
-// Options:
-// 1. Do nothing (save); only valid if at least one robot is both UNBUILDABLE and WILL BECOME SO
-// 2. Build an available robot type (each type must be considered)
-//    Probably safe to assume building geode robot will be optimal if we're able to do it
-
-// Filter builds that would result in higher production of a resource than the maximum cost (excluding itself) involving it
-
-let inline (?>) opt def = Option.defaultValue def opt
-let inline trinum n = max 0 (n * (n + 1) / 2)
 
 let parse file =
     let parseLine =
@@ -39,99 +34,118 @@ let parse file =
         String.regGroups reg
         >> List.map int
         >> function
-        | [id; ore; clay; obsidOre; obsidClay; geodeOre; geodeOsid] ->
-            let bill = [
-                Ore, [Ore, ore]
-                Clay, [Ore, clay]
-                Obsidian, [Ore, obsidOre; Clay, obsidClay]
-                Geode, [Ore, geodeOre; Obsidian, geodeOsid]
-            ]
-            {Id = id; Costs = Map.ofList bill}
+        | [ident; ore; clay; obsidOre; obsidClay; geodeOre; geodeOsid] ->
+            // let costMap =
+            //     Seq.append (Seq.replicate 4 0 |> Seq.zip Resource.Each) >> Map.ofSeq
+            let bill =
+                Map.ofList [
+                    // Ore, costMap [Ore, ore]
+                    // Clay, costMap [Ore, clay]
+                    // Obsidian, costMap [Ore, obsidOre; Clay, obsidClay]
+                    // Geode, costMap [Ore, geodeOre; Obsidian, geodeOsid]
+                    Ore, [Ore, ore]
+                    Clay, [Ore, clay]
+                    Obsidian, [Ore, obsidOre; Clay, obsidClay]
+                    Geode, [Ore, geodeOre; Obsidian, geodeOsid]
+                ]
+            // let maxes =
+            //     Map.values bill
+            //     |> Seq.collect Map.toSeq
+            //     |> Seq.groupBy fst
+            //     |> Seq.map (fun (k, v) -> k, Seq.map snd v |> Seq.max)
+            //     |> Map.ofSeq
+            let maxes =
+                Map.values bill
+                |> Seq.collect id
+                |> Seq.groupBy fst
+                |> Seq.map (fun (k, v) -> k, Seq.map snd v |> Seq.max)
+                |> Seq.append (Map.toSeq Resource.EmptyMap)
+                |> Map.ofSeq
+            {Id = ident; Costs = bill; MaxCosts = maxes}
         | _ -> failwith "Invalid input"
     File.ReadAllLines file
     |> Array.map parseLine
 
-let searchPaths blueprint maxTime =
-    let mutable maxGeodes = 0
+let breadthFirst neighborFn pruneFn initState =
+    let rec recur queue explored =
+        if Queue.isEmpty queue then
+            explored
+        else
+            let (next, queue) = Queue.dequeue queue
+            // printfn "%A" next
+            let branches = neighborFn next |> Seq.filter (fun e -> not <| Set.contains e explored)
+            let explored = Seq.fold (fun acc e -> Set.add e acc) explored branches
+            let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches
+            let queue = if Queue.isEmpty queue then queue else pruneFn queue
+            recur queue explored
+    
+    let queue = Queue.singleton initState
+    let explored = Set.singleton initState
+    recur queue explored
 
-    let canBuild (inv: Inventory) kind =
-        blueprint.Costs[kind]
-        |> Seq.forall (fun (res, amt) -> inv[res] >= amt)
+let solveBlueprint print maxTime =
+    let canBuildMiner (inv: Inventory) kind =
+        print.Costs[kind] |> Seq.forall (fun (res, amt) -> inv[res] >= amt)
 
-    let tickBots inv bots = 
-        Map.toSeq bots
-        |> Seq.fold (fun acc (k, n) -> Map.add k (acc[k] + n) acc) inv
-
-    let buildRobot inv (bots: Inventory) kind =
-        let inv = blueprint.Costs[kind] |> Seq.fold (fun acc (k, n) -> Map.add k (acc[k] - n) acc) inv
+    let buildMiner (inv: Inventory) (bots: Inventory) kind =
+        let inv = Seq.fold (fun acc (res, amt) -> Map.add res (acc[res] - amt) acc) inv print.Costs[kind]
         let bots = Map.add kind (bots[kind] + 1) bots
         (inv, bots)
 
-    let getStrats (inv: Inventory) (bots: Inventory) time buildable =
-        let timeLeft = maxTime - time
-        let potGeodes = inv[Geode] + bots[Geode] * timeLeft + trinum (timeLeft - 1)
+    let nextStates (inv: Inventory, bots: Inventory, timeLeft) =
+        let buildable = Resource.Each |> List.filter (canBuildMiner inv)
+        let inv = Map.map (fun res amt -> bots[res] + amt) inv
 
-        if timeLeft <= 0 then
-            []
-        elif potGeodes < maxGeodes then
+        if timeLeft = 0 then
             []
         elif Seq.contains Geode buildable then
-            [Build Geode]
+            let (inv, bots) = buildMiner inv bots Geode
+            [inv, bots, timeLeft - 1]
         else
-            let notMaxed kind = Map.values blueprint.Costs |> Seq.collect id |> Seq.filter (fst >> (=) kind) |> Seq.map snd |> Seq.max > bots[kind]
-            Seq.filter notMaxed buildable
-            |> Seq.map Build
-            |> Seq.toList
-            |> List.append [Wait]
+            buildable
+            |> List.filter (fun kind -> bots[kind] < print.MaxCosts[kind])
+            |> List.map (buildMiner inv bots >> fun (inv, bots) -> (inv, bots, timeLeft - 1))
+            |> List.append [inv, bots, timeLeft - 1]
 
-    let rec recur =
-        let func (inv: Inventory) bots log time =
-            if inv[Geode] > maxGeodes then
-                maxGeodes <- inv[Geode]
-                printfn "%A" maxGeodes
-
-            if time = maxTime then
-                [inv, List.rev log]
-            else
-                let buildable = Resource.Each |> List.filter (canBuild inv)
-
-                getStrats inv bots time buildable
-                |> Seq.map (fun strat ->
-                    let inv = tickBots inv bots
-                    // let log = (time + 1, strat) :: log
-                    match strat with
-                    | Build kind ->
-                        let (inv, bots) = buildRobot inv bots kind
-                        recur inv bots log (time + 1)
-                    | Wait ->
-                        recur inv bots log (time + 1))
-                // |> Seq.maxBy (fun (inv, _) -> inv[Geode])
-                |> Seq.collect id
+    let pruneQueue =
+        let mutable lastDepth = maxTime
+        fun queue ->
+            let (_, _, depth) = Queue.head queue
+            if depth <> lastDepth then
+                // printfn "%A" depth
+                lastDepth <- depth
+                Queue.toSeq queue
+                |> Seq.groupBy (fun (inv: Inventory, _, _) -> inv[Geode])
+                |> Seq.maxBy fst
+                |> snd
                 |> Seq.toList
+                |> Queue.ofList
 
-        let dict = Dictionary<_, _>()
-        fun inv bots log time ->
-            let key = (inv, bots, time)
-            match dict.TryGetValue key with
-            | true, value ->
-                value
-            | _ -> 
-                let value = func inv bots log time
-                dict.Add(key, value)
-                value
-
-    let inv = Resource.Each |> List.map (Tuple2.withSnd 0) |> Map.ofList
-    let bots = Resource.Each |> List.map (Tuple2.withSnd 0) |> Map.ofList |> Map.add Ore 1
-    recur inv bots [] 0
-
+            else
+                queue
+    
+    let inv = Resource.EmptyMap
+    let bots = Map.add Ore 1 Resource.EmptyMap
+    breadthFirst nextStates pruneQueue (inv, bots, maxTime)
+    |> Seq.map (fun (inv, _, _) -> inv[Geode])
+    |> Seq.max
+    |> (*) print.Id
+    
 let solveSilver (input: Blueprint[]) =
-    searchPaths input[0] 24
-    |> Seq.map fst
-    |> Seq.maxBy (fun k -> k[Geode])
-    |> printfn "%A" 
-    ""
+    input
+    |> Seq.map (fun print -> async {return solveBlueprint print 24})
+    |> Async.Parallel
+    |> Async.RunSynchronously
+    |> Seq.sum
+    |> string
 
-let solveGold input =
-    ""
+let solveGold (input: Blueprint[]) =
+    input
+    |> Seq.truncate 3
+    |> Seq.map (fun print -> async {return solveBlueprint print 32})
+    |> Async.Parallel
+    |> Async.RunSynchronously
+    |> Seq.reduce (*)
+    |> string
 
 let Solver = chainSolver parse solveSilver solveGold
