@@ -17,13 +17,7 @@ let shiftNumbers (cipher: Digit[]) =
         let src = Array.findIndex (fun v -> v.Order = n) cipher
         let dig = cipher[src]
 
-        let dst =
-            if dig.Value > 0 then
-                (int64 src + dig.Value) % cipher.LongLength % (cipher.LongLength - 1L) |> int
-            elif dig.Value < 0 then
-                ((int64 src + dig.Value - 1L) % cipher.LongLength + cipher.LongLength) % cipher.LongLength |> int
-            else
-                src
+        let dst = ((int64 src + dig.Value) % (cipher.LongLength - 1L) + (cipher.LongLength - 1L)) % (cipher.LongLength - 1L) |> int
 
         if src < dst then
             for i in src .. dst - 1 do
@@ -49,7 +43,7 @@ let solveSilver =
 
 let solveGold =
     Array.map (fun { Value = v; Order = i } -> { Value = v * 811589153L; Order = i })
-    >> fun n -> [1 .. 10] |> Seq.fold (fun acc _ -> printfn "%A" acc; shiftNumbers acc) n
+    >> fun n -> [1 .. 10] |> Seq.fold (fun acc _ -> shiftNumbers acc) n
     >> getCoords
     >> string
 
