@@ -5,7 +5,7 @@ open Util.Extensions
 open Util.Plumbing
 
 [<Struct>]
-type Digit = { Value: int; Order: int }
+type Digit = { Value: int64; Order: int }
 
 let parse =
     File.ReadAllLines
@@ -13,18 +13,15 @@ let parse =
     >> Array.mapi (fun i v -> { Value = v; Order = i})
 
 let shiftNumbers (cipher: Digit[]) =
-    let cipher = Array.copy cipher
-    
     for n in 0 .. cipher.Length - 1 do
         let src = Array.findIndex (fun v -> v.Order = n) cipher
         let dig = cipher[src]
 
         let dst =
-            // printfn "%A" dig.Value
             if dig.Value > 0 then
-                (src + dig.Value) % (cipher.Length - 1)
+                (int64 src + dig.Value) % cipher.LongLength % (cipher.LongLength - 1L) |> int
             elif dig.Value < 0 then
-                (src + dig.Value - 1 + cipher.Length * 2) % cipher.Length
+                ((int64 src + dig.Value - 1L) % cipher.LongLength + cipher.LongLength) % cipher.LongLength |> int
             else
                 src
 
@@ -45,12 +42,17 @@ let getCoords cipher =
     |> List.map (fun n -> n.Value)
     |> List.sum
 
-let solveSilver input =
-    shiftNumbers input
-    |> getCoords
-    |> string
+let solveSilver =
+    shiftNumbers
+    >> getCoords
+    >> string
 
-let solveGold input =
-    ""
+let solveGold =
+    Array.map (fun { Value = v; Order = i } -> { Value = v * 811589153L; Order = i })
+    >> fun n -> [1 .. 10] |> Seq.fold (fun acc _ -> printfn "%A" acc; shiftNumbers acc) n
+    >> getCoords
+    >> string
 
-let Solver = chainSolver parse solveSilver solveGold
+let withCopy fn = Array.copy >> fn
+
+let Solver = chainSolver parse (withCopy solveSilver) (withCopy solveGold)
