@@ -35,6 +35,33 @@ let getBounds points margin =
     let minz, maxz = Seq.min zs - margin, Seq.max zs + margin
     (minx, miny, minz), (maxx, maxy, maxz)
 
+let breadthFirst neighborsFn initState =
+    let rec recur queue explored =
+        if Queue.isEmpty queue then
+            explored
+        else
+            let (next, queue) = Queue.dequeue queue
+            let branches = neighborsFn next |> Seq.filter (fun e -> not <| Set.contains e explored)
+            let explored = Seq.fold (fun acc e -> Set.add e acc) explored branches
+            let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches
+            recur queue explored
+    
+    let queue = Queue.singleton initState
+    let explored = Set.singleton initState
+    recur queue explored
+
+let calcExposedArea points =
+    let (lower, upper) = getBounds points 1
+
+    let mutable area = 0
+    let getNeighbors p =
+        let matter, air = neighbors p |> List.filter (bounds lower upper) |> List.partition (fun p -> Set.contains p points)
+        area <- area + List.length matter
+        air
+
+    breadthFirst getNeighbors lower |> ignore
+    area
+
 let calcArea points =
     // Get a bounding box around the droplet with a margin of "air" one unit wide
     let (lower, upper) = getBounds points 1
@@ -71,6 +98,6 @@ let calcArea points =
     
 
 
-let solveGold = calcArea >> string
+let solveGold = calcExposedArea >> string
 
 let Solver = chainSolver parse solveSilver solveGold

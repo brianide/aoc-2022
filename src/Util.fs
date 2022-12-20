@@ -151,8 +151,15 @@ module Collections =
 
         let isEmpty = function Queue ([], []) -> true | _ -> false
 
+        let length = function Queue (ins, outs) -> List.length ins + List.length outs
+
         let contains e = function
             | Queue (ins, outs) -> List.contains e ins || List.contains e outs
+
+        let head = function
+            | Queue ([], []) -> failwith "No elements remaining"
+            | Queue (ins, []) -> List.last ins
+            | Queue (_, outs) -> List.head outs
 
         let enqueue e q =
             match q with Queue (ins, outs) -> Queue(e :: ins, outs)
@@ -166,6 +173,8 @@ module Collections =
 
         let toSeq = function
             | Queue (ins, outs) -> Seq.append outs (List.rev ins)
+
+        let ofList s = Queue ([], s)
 
 
 let formatGrid fmtVal limit grid =

@@ -27,6 +27,7 @@ type Strategy = Build of Resource | Wait
 // Filter builds that would result in higher production of a resource than the maximum cost (excluding itself) involving it
 
 let inline (?>) opt def = Option.defaultValue def opt
+let inline trinum n = max 0 (n * (n + 1) / 2)
 
 let parse file =
     let parseLine =
@@ -51,6 +52,8 @@ let parse file =
     |> Array.map parseLine
 
 let searchPaths blueprint maxTime =
+    let mutable maxGeodes = 0
+
     let canBuild (inv: Inventory) kind =
         blueprint.Costs[kind]
         |> Seq.forall (fun (res, amt) -> inv[res] >= amt)
@@ -64,32 +67,38 @@ let searchPaths blueprint maxTime =
         let bots = Map.add kind (bots[kind] + 1) bots
         (inv, bots)
 
-    let checkStrat (inv: Inventory) (bots: Inventory) time buildable strat =
-        if time >= 20 && bots[Geode] = 0 then
-            false
+    let getStrats (inv: Inventory) (bots: Inventory) time buildable =
+        let timeLeft = maxTime - time
+        let potGeodes = inv[Geode] + bots[Geode] * timeLeft + trinum (timeLeft - 1)
+
+        if timeLeft <= 0 then
+            []
+        elif potGeodes < maxGeodes then
+            []
+        elif Seq.contains Geode buildable then
+            [Build Geode]
         else
-            match strat with
-            | Build Geode ->
-                true
-            | Build kind ->
-                let maxNeeded = Map.values blueprint.Costs |> Seq.collect id |> Seq.filter (fst >> (=) kind) |> Seq.map snd |> Seq.max
-                bots[kind] < maxNeeded - 1 && not <| Seq.contains Geode buildable
-            | Wait -> Seq.length buildable < 4 && not <| Seq.contains Geode buildable
+            let notMaxed kind = Map.values blueprint.Costs |> Seq.collect id |> Seq.filter (fst >> (=) kind) |> Seq.map snd |> Seq.max > bots[kind]
+            Seq.filter notMaxed buildable
+            |> Seq.map Build
+            |> Seq.toList
+            |> List.append [Wait]
 
     let rec recur =
-        let func inv bots log time =
+        let func (inv: Inventory) bots log time =
+            if inv[Geode] > maxGeodes then
+                maxGeodes <- inv[Geode]
+                printfn "%A" maxGeodes
+
             if time = maxTime then
                 [inv, List.rev log]
             else
                 let buildable = Resource.Each |> List.filter (canBuild inv)
 
-                buildable
-                |> Seq.map Build
-                |> Seq.append [Wait]
-                |> Seq.filter (checkStrat inv bots time buildable)
+                getStrats inv bots time buildable
                 |> Seq.map (fun strat ->
                     let inv = tickBots inv bots
-                    let log = (time + 1, strat) :: log
+                    // let log = (time + 1, strat) :: log
                     match strat with
                     | Build kind ->
                         let (inv, bots) = buildRobot inv bots kind
@@ -105,7 +114,6 @@ let searchPaths blueprint maxTime =
             let key = (inv, bots, time)
             match dict.TryGetValue key with
             | true, value ->
-                // printfn "Cache hit: %A => %A" key value
                 value
             | _ -> 
                 let value = func inv bots log time
