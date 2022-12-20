@@ -129,15 +129,16 @@ let solveBlueprint print maxTime =
     breadthFirst nextStates pruneQueue (inv, bots, maxTime)
     |> Seq.map (fun (inv, _, _) -> inv[Geode])
     |> Seq.max
-    |> (*) print.Id
+    // |> (*) print.Id
     
 let solveSilver (input: Blueprint[]) =
     input
-    |> Seq.map (fun print -> async {return solveBlueprint print 24})
+    |> Seq.take 3
+    |> Seq.map (fun print -> async {return solveBlueprint print 32})
     |> Async.Parallel
     |> Async.RunSynchronously
-    |> Seq.sum
-    |> string
+    // |> Seq.sum
+    |> sprintf "%A"
 
 let solveGold (input: Blueprint[]) =
     ""
