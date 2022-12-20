@@ -125,6 +125,8 @@ module Extensions =
     module Tuple2 =
         let map f (a, b) = (f a, f b)
 
+        let withSnd b a = (a, b)
+
 module Math =
     let inline gcd (a: ^a) (b: ^a) =
         let (zero: ^a) = LanguagePrimitives.GenericZero
