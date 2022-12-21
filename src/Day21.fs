@@ -7,43 +7,85 @@ open Util.Math
 open Util.Patterns
 open Util.Plumbing
 
-type Instruction =
+type Token =
 | Constant of int64
-| Add of string * string
-| Subtract of string * string
-| Multiply of string * string
-| Divide of string * string
+| Operation of string * string * string
+
+type Expr =
+| Const of int64
+| Query
+| Add of Expr * Expr
+| Sub of Expr * Expr
+| Mul of Expr * Expr
+| Div of Expr * Expr
+| Equal of Expr * Expr
 
 let parse file =
-    let (|Operation|) = function
-    | [reg1; "+"; reg2; ""] -> Add (reg1, reg2)
-    | [reg1; "-"; reg2; ""] -> Subtract (reg1, reg2)
-    | [reg1; "*"; reg2; ""] -> Multiply (reg1, reg2)
-    | [reg1; "/"; reg2; ""] -> Divide (reg1, reg2)
-    | x -> failwithf "Invalid input: %A" x
+    let tokenizeLine = function
+    | RegGroups @"([a-z]{4}): ([a-z]{4}) ([*/+-]) ([a-z]{4})" [label; key1; op; key2] -> label, Operation (op, key1, key2)
+    | RegGroups @"([a-z]{4}): (\d+)" [label; Int64 value] -> label, Constant value
+    | s -> failwithf "Invalid input: %s" s
 
-    let parseLine line =
-        match String.regGroups @"(\w{4}): (?:(\w{4}) ([*/+-]) (\w{4})|(\d+))" line with
-        | [label; ""; ""; ""; Int64 value] -> label, Constant value
-        | label :: Operation op -> label, op
-        | _ -> failwith "Invalid input"
-
-    File.ReadAllLines file
-    |> Array.map parseLine
-    |> Map.ofArray
-
-let rec evaluate (tab: Map<string, Instruction>) key =
-    match tab[key] with
-    | Constant n -> n
-    | Add (a, b) -> (evaluate tab a) + (evaluate tab b)
-    | Subtract (a, b) -> (evaluate tab a) - (evaluate tab b)
-    | Multiply (a, b) -> (evaluate tab a) * (evaluate tab b)
-    | Divide (a, b) -> (evaluate tab a) / (evaluate tab b)
+    File.ReadAllLines file |> Array.map tokenizeLine |> Map.ofArray
 
 let solveSilver input =
-    evaluate input "root" |> string
+    ""
+
+let rec parseExpression (table: Map<string, Token>) root =
+    let (|Operator|) = function
+    | "+" -> Add
+    | "-" -> Sub
+    | "*" -> Mul
+    | "/" -> Div
+    | op -> failwithf "Invalid operator: %s" op
+
+    match root, table[root] with
+    | "root", Operation (_, key1, key2) -> Equal (parseExpression table key1, parseExpression table key2)
+    | "humn", _ -> Query
+    | _, Constant value -> Const value
+    | _, Operation (Operator op, key1, key2) -> op (parseExpression table key1, parseExpression table key2)
+
+let rec simplify expr =
+    let reduce e = function
+    | Const _ -> failwith "Can't solve constant equality!"
+    | Add (Const n, b) -> Equal (Const (e - n), b)
+    | Add (a, Const n) -> Equal (Const (e - n), a)
+    | Sub (Const n, b) -> Equal (Const (n - e), b)
+    | Sub (a, Const n) -> Equal (Const (e + n), a)
+    | Mul (Const n, b) -> Equal (Const (e / n), b)
+    | Mul (a, Const n) -> Equal (Const (e / n), a)
+    | Div (Const n, b) -> Equal (Const (n / e), b)
+    | Div (a, Const n) -> Equal (Const (e * n), a)
+    | Query -> Const e
+    | x -> printfn "Unreduced: %A" (e, x); x
+
+    match expr with
+    | Const n -> Const n
+    | Query -> Query
+    | Add (Const a, Const b) -> Const (a + b)
+    | Add (a, b) -> Add (simplify a, simplify b)
+    | Sub (Const a, Const b) -> Const (a - b)
+    | Sub (a, b) -> Sub (simplify a, simplify b)
+    | Mul (Const a, Const b) -> Const (a * b)
+    | Mul (a, b) -> Mul (simplify a, simplify b)
+    | Div (Const a, Const b) -> Const (a / b)
+    | Div (a, b) -> Div (simplify a, simplify b)
+    | Equal (Const a, b) -> reduce a (simplify b)
+    | Equal (a, Const b) -> reduce b (simplify a)
+    | Equal (a, b) -> Equal (simplify a, simplify b)
+
 
 let solveGold input =
+    let rec simp expr =
+        let next = simplify expr
+        if next <> expr then
+            simp next
+        else
+            next
+
+    parseExpression input "root"
+    |> simp
+    |> printfn "%A"
     ""
 
 let Solver = chainSolver parse solveSilver solveGold
