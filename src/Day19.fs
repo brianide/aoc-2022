@@ -8,17 +8,11 @@ open Util.Math
 open Util.Patterns
 open Util.Plumbing
 
-//Blueprint (\d+): Each ore robot costs (\d+) ore. Each clay robot costs (\d+) ore. Each obsidian robot costs (\d+) ore and (\d+) clay. Each geode robot costs (\d+) ore and (\d+) obsidian.
-
 type Resource =
     Ore | Clay | Obsidian | Geode
     static member Each = [Ore; Clay; Obsidian; Geode]
     static member EmptyMap = Seq.replicate 4 0 |> Seq.zip Resource.Each |> Map.ofSeq
 
-// type Inventory = Map<Resource, int>
-// type CostSpec = Map<Resource, int>
-// type Blueprint = {Id: int; Costs: Map<Resource, CostSpec>; MaxCosts: Map<Resource, int>}
-// type Strategy = Build of Resource | Wait
 type Inventory = Map<Resource, int>
 type CostSpec = Resource * int
 type Blueprint = {Id: int; Costs: Map<Resource, CostSpec list>; MaxCosts: Map<Resource, int>}
@@ -35,25 +29,13 @@ let parse file =
         >> List.map int
         >> function
         | [ident; ore; clay; obsidOre; obsidClay; geodeOre; geodeOsid] ->
-            // let costMap =
-            //     Seq.append (Seq.replicate 4 0 |> Seq.zip Resource.Each) >> Map.ofSeq
             let bill =
                 Map.ofList [
-                    // Ore, costMap [Ore, ore]
-                    // Clay, costMap [Ore, clay]
-                    // Obsidian, costMap [Ore, obsidOre; Clay, obsidClay]
-                    // Geode, costMap [Ore, geodeOre; Obsidian, geodeOsid]
                     Ore, [Ore, ore]
                     Clay, [Ore, clay]
                     Obsidian, [Ore, obsidOre; Clay, obsidClay]
                     Geode, [Ore, geodeOre; Obsidian, geodeOsid]
                 ]
-            // let maxes =
-            //     Map.values bill
-            //     |> Seq.collect Map.toSeq
-            //     |> Seq.groupBy fst
-            //     |> Seq.map (fun (k, v) -> k, Seq.map snd v |> Seq.max)
-            //     |> Map.ofSeq
             let maxes =
                 Map.values bill
                 |> Seq.collect id
@@ -66,21 +48,22 @@ let parse file =
     File.ReadAllLines file
     |> Array.map parseLine
 
-let breadthFirst neighborFn pruneFn initState =
+let breadthFirst neighborFn keyFn pruneFn initState =
     let rec recur queue explored =
         if Queue.isEmpty queue then
             explored
         else
             let (next, queue) = Queue.dequeue queue
             // printfn "%A" next
-            let branches = neighborFn next |> Seq.filter (fun e -> not <| Set.contains e explored)
-            let explored = Seq.fold (fun acc e -> Set.add e acc) explored branches
-            let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches
-            let queue = if Queue.isEmpty queue then queue else pruneFn queue
+            let branches = neighborFn next |> Seq.filter (fun e -> not <| Set.contains (keyFn e) explored)
+            let explored = Seq.fold (fun acc e -> Set.add (keyFn e) acc) explored branches
+
+            let pruneFn = if Queue.isEmpty queue then id else pruneFn
+            let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches |> pruneFn
             recur queue explored
     
     let queue = Queue.singleton initState
-    let explored = Set.singleton initState
+    let explored = Set.singleton (keyFn initState)
     recur queue explored
 
 let solveBlueprint print maxTime =
@@ -110,42 +93,40 @@ let solveBlueprint print maxTime =
     let pruneQueue =
         let mutable lastDepth = maxTime
         fun queue ->
-            let (_, _, depth) = Queue.head queue
-            if depth <> lastDepth then
-                // printfn "%A" depth
-                lastDepth <- depth
+            let (_, _, timeLeft) = Queue.head queue
+            if timeLeft <> lastDepth then
+                // printfn "%A" timeLeft
+                lastDepth <- timeLeft
                 Queue.toSeq queue
-                |> Seq.groupBy (fun (inv: Inventory, _, _) -> inv[Geode])
-                |> Seq.maxBy fst
-                |> snd
+                |> Seq.sortByDescending (fun (inv: Inventory, bots: Inventory, timeLeft) ->
+                    let atEnd res = bots[res] * timeLeft + inv[res]
+                    atEnd Geode, atEnd Obsidian, inv[Clay])
+                |> Seq.truncate 500
                 |> Seq.toList
                 |> Queue.ofList
-
             else
                 queue
     
     let inv = Resource.EmptyMap
     let bots = Map.add Ore 1 Resource.EmptyMap
-    breadthFirst nextStates pruneQueue (inv, bots, maxTime)
-    |> Seq.map (fun (inv, _, _) -> inv[Geode])
+    breadthFirst nextStates (fun (inv, bots, _) -> inv, bots) pruneQueue (inv, bots, maxTime)
+    |> Seq.map (fun (inv, _) -> inv[Geode])
     |> Seq.max
-    |> (*) print.Id
     
-let solveSilver (input: Blueprint[]) =
+let solveSilver input =
     input
-    |> Seq.map (fun print -> async {return solveBlueprint print 24})
+    |> Seq.map (fun print -> async {return print.Id * solveBlueprint print 24})
     |> Async.Parallel
     |> Async.RunSynchronously
     |> Seq.sum
     |> string
 
-let solveGold (input: Blueprint[]) =
+let solveGold input =
     input
     |> Seq.truncate 3
     |> Seq.map (fun print -> async {return solveBlueprint print 32})
     |> Async.Parallel
     |> Async.RunSynchronously
-    |> Seq.reduce (*)
-    |> string
+    |> fun n -> if n.Length = 2 then sprintf "%A" n else Seq.reduce (*) n |> string
 
 let Solver = chainSolver parse solveSilver solveGold

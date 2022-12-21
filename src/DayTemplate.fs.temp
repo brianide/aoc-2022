@@ -1,6 +1,7 @@
 module Day
 
 open System.IO
+open Util.Collections
 open Util.Extensions
 open Util.Math
 open Util.Patterns

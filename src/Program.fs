@@ -1,5 +1,3 @@
-open Util.Plumbing
-
 let solvers = [|
     ("1", Day1.Solver, "Calorie Counting")
     ("2", Day2.Solver, "Rock Paper Scissors")
@@ -24,6 +22,7 @@ let solvers = [|
     ("18", Day18.Solver, "Boiling Boulders")
     ("19", Day19.Solver, "Not Enough Minerals")
     ("20", Day20.Solver, "Grove Positioning System")
+    ("21", Day21.Solver, "Day21")
     //^ new days go here ^
 |]
 
