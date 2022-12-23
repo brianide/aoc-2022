@@ -24,6 +24,7 @@ let solvers = [|
     ("20", Day20.Solver, "Grove Positioning System")
     ("21", Day21.Solver, "Monkey Math")
     ("22", Day22.Solver, "Monkey Map")
+    ("23", Day23.Solver, "Day23")
     //^ new days go here ^
 |]
 
