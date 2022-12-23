@@ -25,6 +25,11 @@ module Plumbing =
         | _ -> failwith "Invalid args; please specify an input file, output dir, and prefix"
 
 
+module Debug =
+    let inline thru f v = f v; v
+    let inline thruSeq f v = Seq.iter f v; v
+
+
 module Patterns =
     let (|Int32|_|) (x: string) =
         try int x |> Some with :? System.FormatException -> None
@@ -124,8 +129,14 @@ module Extensions =
 
     module Tuple2 =
         let map f (a, b) = (f a, f b)
-
         let withSnd b a = (a, b)
+
+        module Infix =
+            let inline (.+) (x, y) (a, b) = (x + a, y + b)
+            let inline (.-) (x, y) (a, b) = (x - a, y - b)
+            let inline (.*) (x, y) n = (x * n, y * n)
+            let inline (./) (x, y) n = (x / n, y / n)
+            let inline (.%) (x, y) n = ((x % n + n) % n, (y % n + n) % n)
 
 module Math =
     let inline gcd (a: ^a) (b: ^a) =
