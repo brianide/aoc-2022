@@ -117,6 +117,12 @@ module Extensions =
         let regSplit reg str =
             System.Text.RegularExpressions.Regex.Split (str, reg) |> Array.toSeq
 
+    module Array =
+        let mutate f arr =
+            for i in 0 .. Array.length arr - 1 do
+                arr[i] <- f arr[i]
+            arr
+
     module Array2D =
         let isInside grid (i, j) =
             i >= 0 && i < Array2D.length1 grid && j >= 0 && j < Array2D.length2 grid
