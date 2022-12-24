@@ -44,17 +44,15 @@ let getNeighbors (width, height) (blizzards: Blizzard[]) pos =
     |> List.filter (fun (r, c) -> bounds 0 (height - 1) r && bounds 0 (width - 1) c)
     |> List.filter (fun p -> Array.forall (fun (Blizzard (bpos, _)) -> p <> bpos) blizzards)
 
-let breadthFirst (width, height as dims) blizzards =
-    let goal = (height - 1, width - 1)
-    // printfn "%A" goal
+let breadthFirst dims blizzards start goal =
     let mutable lastGen = -1
     let rec recur queue explored blizzards =
         if Queue.isEmpty queue then
-            None
+            failwith "No path found"
         else
             let ((pos, gen), queue) = Queue.dequeue queue
             if pos = goal then
-                Some (pos, gen)
+                gen
             else
                 if gen > lastGen then
                     lastGen <- gen
@@ -71,7 +69,7 @@ let breadthFirst (width, height as dims) blizzards =
                 let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches
                 recur queue explored blizzards
     
-    let init = (0, 0), 1
+    let init = start, 1
     let queue = Queue.singleton init
     let explored = Set.singleton init
     recur queue explored blizzards
@@ -82,17 +80,25 @@ let printable (fromPos, toPos) =
     | ( 1, 0) -> Some South | (0,  1) -> Some East
     | ( 0, 0) -> None | x -> failwithf "wtf: %A" x
 
-let solveSilver (dims, blizzards) =
-    // advanceBlizzards dims blizzards |> ignore
-    breadthFirst dims blizzards
-    |> function
-    | Some (pos, steps) ->
-        // moves |> Seq.pairwise |> Seq.map (fun e -> fst e, printable e) |> Seq.iter (printfn "%A")
-        printfn "%A %A" pos steps
-    | None -> ()
-    ""
+let solveSilver ((width, height as dims), blizzards) =
+    let start = (0, 0)
+    let goal = (height - 1, width - 1)
+    breadthFirst dims blizzards start goal
+    |> sprintf "%A"
 
-let solveGold input =
-    ""
+let solveGold ((width, height as dims), blizzards) =
+    let firstLeg =
+        let start = (0, 0)
+        let goal = (height - 1, width - 1)
+        breadthFirst dims blizzards start goal
+    let secondLeg =
+        let start = (height - 1, width - 1)
+        let goal = (0, 0)
+        breadthFirst dims blizzards start goal
+    let thirdLeg =
+        let start = (0, 0)
+        let goal = (height - 1, width - 1)
+        breadthFirst dims blizzards start goal
+    firstLeg + secondLeg + thirdLeg |> string
 
 let Solver = chainSolver parse solveSilver solveGold
