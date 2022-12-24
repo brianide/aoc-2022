@@ -35,7 +35,7 @@ let advanceBlizzards (width, height) (blizzards: Blizzard[]) =
             match dir with
             | North -> (-1, 0) | West -> (0, -1)
             | South -> ( 1, 0) | East -> (0,  1)
-        Blizzard (((r + i )% height, (c + j) % width), dir)
+        Blizzard (((r + i + height) % height, (c + j + width) % width), dir)
     Array.mutate move blizzards
 
 let getNeighbors (width, height) (blizzards: Blizzard[]) pos =
@@ -46,23 +46,24 @@ let getNeighbors (width, height) (blizzards: Blizzard[]) pos =
 
 let breadthFirst (width, height as dims) blizzards =
     let goal = (height - 1, width - 1)
-    printfn "%A" goal
+    // printfn "%A" goal
     let mutable lastGen = -1
     let rec recur queue explored blizzards =
         if Queue.isEmpty queue then
             None
         else
-            let ((pos, gen, path), queue) = Queue.dequeue queue
+            let ((pos, gen), queue) = Queue.dequeue queue
             if pos = goal then
-                Some (pos, gen, List.rev path)
+                Some (pos, gen)
             else
                 if gen > lastGen then
                     lastGen <- gen
                     advanceBlizzards dims blizzards |> ignore
+                    printfn "%A" gen
 
                 let branches =
                     getNeighbors dims blizzards pos
-                    |> List.map (fun e -> e, gen + 1, e :: path)
+                    |> List.map (fun e -> e, gen + 1)
                     |> List.filter (fun e -> not <| Set.contains e explored)
                 let explored =
                     List.fold (fun acc e -> Set.add e acc) explored branches
@@ -70,7 +71,7 @@ let breadthFirst (width, height as dims) blizzards =
                 let queue = Seq.fold (fun acc e -> Queue.enqueue e acc) queue branches
                 recur queue explored blizzards
     
-    let init = (0, 0), 0, [0, 0]
+    let init = (0, 0), 1
     let queue = Queue.singleton init
     let explored = Set.singleton init
     recur queue explored blizzards
@@ -85,8 +86,8 @@ let solveSilver (dims, blizzards) =
     // advanceBlizzards dims blizzards |> ignore
     breadthFirst dims blizzards
     |> function
-    | Some (pos, steps, moves) ->
-        moves |> Seq.pairwise |> Seq.map (fun e -> fst e, printable e) |> Seq.iter (printfn "%A")
+    | Some (pos, steps) ->
+        // moves |> Seq.pairwise |> Seq.map (fun e -> fst e, printable e) |> Seq.iter (printfn "%A")
         printfn "%A %A" pos steps
     | None -> ()
     ""
