@@ -1,13 +1,10 @@
 module Day25
 
 open System.IO
-open Util.Collections
 open Util.Extensions
-open Util.Math
-open Util.Patterns
 open Util.Plumbing
 
-let snafuToInt s =
+let snafuToInt =
     let charValue = function 
     | '=' -> -2L | '-' -> -1L | '0' -> 0L | '1' -> 1L | '2' -> 2L
     | c -> failwithf "Invalid digit: %c" c
@@ -16,25 +13,20 @@ let snafuToInt s =
     | [] -> sum
     | dig :: more -> recur (place * 5L) (sum + place * charValue dig) more
     
-    recur 1 0 (Seq.rev s |> List.ofSeq)
+    Seq.rev >> List.ofSeq >> recur 1 0
 
-let intToSnafu n =
+let intToSnafu =
     let chars = [| '0'; '1'; '2'; '='; '-' |]
-    let rec recur digits value =
-        if value > 0L then
-            recur (chars[int (value % 5L)] :: digits) ((value + 2L) / 5L)
-        else
-            digits |> Array.ofList |> System.String.Concat
+    let rec recur digits = function
+    | 0L -> digits |> Array.ofList |> System.String.Concat<char>
+    | n -> recur (chars[int (n % 5L)] :: digits) ((n + 2L) / 5L)
 
-    if n = 0L then
-        "0"
-    else
-        recur [] n
+    function 0L -> "0" | n -> recur [] n
 
-let parse file =
-    File.ReadAllLines file
-    |> Array.toList
-    |> List.map (snafuToInt)
+let parse =
+    File.ReadAllLines
+    >> Array.toList
+    >> List.map (snafuToInt)
 
 let solveSilver = List.sum >> intToSnafu
 
